@@ -1,4 +1,4 @@
-# openwrt-23.05 - node
+# openwrt-22.03 - node
 
 ### quickly build package that require node dependent
 

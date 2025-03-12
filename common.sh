@@ -580,12 +580,12 @@ function modify_config() {
 	make defconfig > /dev/null
 	
 	# 缓存加速
-	if [[ $ENABLE_CCACHE =~ (fast|Fast|FAST|true|True|TRUE|normal|Normal|NORMAL) ]]; then
+	if [[ $ENABLE_CCACHE =~ (true|True|TRUE) ]]; then
 		__info_msg "开启缓存加速, 如编译出错, 请尝试删除缓存, 或切换为普通加速, 或关闭缓存加速"
 		sed -i '/CONFIG_DEVEL/d' $HOME_PATH/.config > /dev/null 2>&1
 		sed -i '/CONFIG_CCACHE/d' $HOME_PATH/.config > /dev/null 2>&1
-		sed -i '$a CONFIG_DEVEL=y' $HOME_PATH/.config > /dev/null 2>&1
-		sed -i '$a CONFIG_CCACHE=y' $HOME_PATH/.config > /dev/null 2>&1
+		sed -i '$a\CONFIG_DEVEL=y' $HOME_PATH/.config > /dev/null 2>&1
+		sed -i '$a\CONFIG_CCACHE=y' $HOME_PATH/.config > /dev/null 2>&1
 	else
 		__info_msg "关闭缓存加速, 如希望加速编译, 请在settings.ini中开启缓存加速"
 		sed -i '/CONFIG_DEVEL/d' $HOME_PATH/.config > /dev/null 2>&1
@@ -635,31 +635,16 @@ function modify_config() {
 	if [[ `grep -c "CONFIG_TARGET_x86=y" $HOME_PATH/.config` -eq '1' || `grep -c "CONFIG_TARGET_rockchip=y" $HOME_PATH/.config` -eq '1' || `grep -c "CONFIG_TARGET_bcm27xx=y" $HOME_PATH/.config` -eq '1' ]]; then
 		#sed -Ei 's/.*(CONFIG_TARGET_IMAGES_GZIP).*/\1=y/g' $HOME_PATH/.config
 		#sed -Ei 's/.*(CONFIG_PACKAGE_snmpd).*/\1=y/g' $HOME_PATH/.config
-		#sed -Ei 's/.*(CONFIG_PACKAGE_openssh-sftp-server).*/\1=y/g' $HOME_PATH/.config
+		# 支持 sftp 协议
+		sed -Ei 's/.*(CONFIG_PACKAGE_openssh-sftp-server).*/\1=y/g' $HOME_PATH/.config
+
 		if [[ `grep -c "CONFIG_TARGET_ROOTFS_PARTSIZE=" $HOME_PATH/.config` -eq '1' ]]; then
 			local partsize="$(grep -Eo "CONFIG_TARGET_ROOTFS_PARTSIZE=[0-9]+" $HOME_PATH/.config |cut -f2 -d=)"
 			if [[ "$partsize" -lt "400" ]];then
 				sed -i '/CONFIG_TARGET_ROOTFS_PARTSIZE/d' $HOME_PATH/.config
-				sed -i '$a CONFIG_TARGET_ROOTFS_PARTSIZE=400' $HOME_PATH/.config
+				sed -i '$a\CONFIG_TARGET_ROOTFS_PARTSIZE=400' $HOME_PATH/.config
 			fi
 		fi
-	fi
-	
-	if [[ `grep -c "CONFIG_TARGET_mxs=y" $HOME_PATH/.config` -eq '1' || `grep -c "CONFIG_TARGET_sunxi=y" $HOME_PATH/.config` -eq '1' || `grep -c "CONFIG_TARGET_zynq=y" $HOME_PATH/.config` -eq '1' ]]; then	
-		#sed -Ei 's/.*(CONFIG_TARGET_IMAGES_GZIP).*/\1=y/g' $HOME_PATH/.config
-		#sed -Ei 's/.*(CONFIG_PACKAGE_openssh-sftp-server).*/\1=y/g' $HOME_PATH/.config
-		if [[ `grep -c "CONFIG_TARGET_ROOTFS_PARTSIZE=" $HOME_PATH/.config` -eq '1' ]]; then
-			local partsize="$(grep -Eo "CONFIG_TARGET_ROOTFS_PARTSIZE=[0-9]+" $HOME_PATH/.config |cut -f2 -d=)"
-			if [[ "$partsize" -lt "400" ]];then
-				sed -i '/CONFIG_TARGET_ROOTFS_PARTSIZE/d' $HOME_PATH/.config
-				sed -i '$a CONFIG_TARGET_ROOTFS_PARTSIZE=400' $HOME_PATH/.config
-			fi
-		fi
-	fi
-	
-	if [[ `grep -c "CONFIG_TARGET_armvirt=y" $HOME_PATH/.config` -eq '1' || `grep -c "CONFIG_TARGET_armsr=y" $HOME_PATH/.config` -eq '1' ]]; then
-		sed -Ei 's/.*(CONFIG_PACKAGE_luci-app-autoupdate).*/# \1 is not set/g' $HOME_PATH/.config
-		sed -Ei 's/.*(CONFIG_TARGET_ROOTFS_TARGZ).*/\1=y/g' $HOME_PATH/.config
 	fi
 	
 	if [[ `grep -c "CONFIG_PACKAGE_luci-app-adblock=y" $HOME_PATH/.config` -eq '1' ]]; then
@@ -873,21 +858,21 @@ function firmware_settings() {
 	# BIOS引导模式
 	if [[ $BIOS_MODE =~ (uefi|UEFI|Uefi) ]]; then
 		sed -i '/CONFIG_GRUB_IMAGES/d' $HOME_PATH/.config > /dev/null 2>&1
-		sed -i '$a # CONFIG_GRUB_IMAGES is not set' $HOME_PATH/.config > /dev/null 2>&1
+		sed -i '$a\# CONFIG_GRUB_IMAGES is not set' $HOME_PATH/.config > /dev/null 2>&1
 		sed -i '/CONFIG_GRUB_EFI_IMAGES/d' $HOME_PATH/.config > /dev/null 2>&1
-		sed -i '$a CONFIG_GRUB_EFI_IMAGES=y' $HOME_PATH/.config > /dev/null 2>&1
+		sed -i '$a\CONFIG_GRUB_EFI_IMAGES=y' $HOME_PATH/.config > /dev/null 2>&1
 		__info_msg "编译uefi固件"
 	elif [[ $BIOS_MODE =~ (legacy|LEGACY|Legacy) ]]; then
 		sed -i '/CONFIG_GRUB_IMAGES/d' $HOME_PATH/.config > /dev/null 2>&1
-		sed -i '$a CONFIG_GRUB_IMAGES=y' $HOME_PATH/.config > /dev/null 2>&1
+		sed -i '$a\CONFIG_GRUB_IMAGES=y' $HOME_PATH/.config > /dev/null 2>&1
 		sed -i '/CONFIG_GRUB_EFI_IMAGES/d' $HOME_PATH/.config > /dev/null 2>&1
-		sed -i '$a # CONFIG_GRUB_EFI_IMAGES is not set' $HOME_PATH/.config > /dev/null 2>&1
+		sed -i '$a\# CONFIG_GRUB_EFI_IMAGES is not set' $HOME_PATH/.config > /dev/null 2>&1
 		__info_msg "编译legacy固件"
 	elif [[ $BIOS_MODE =~ (both|BOTH|Both|all|ALL|All) ]]; then
 		sed -i '/CONFIG_GRUB_IMAGES/d' $HOME_PATH/.config > /dev/null 2>&1
-		sed -i '$a CONFIG_GRUB_IMAGES=y' $HOME_PATH/.config > /dev/null 2>&1
+		sed -i '$a\CONFIG_GRUB_IMAGES=y' $HOME_PATH/.config > /dev/null 2>&1
 		sed -i '/CONFIG_GRUB_EFI_IMAGES/d' $HOME_PATH/.config > /dev/null 2>&1
-		sed -i '$a CONFIG_GRUB_EFI_IMAGES=y' $HOME_PATH/.config > /dev/null 2>&1
+		sed -i '$a\CONFIG_GRUB_EFI_IMAGES=y' $HOME_PATH/.config > /dev/null 2>&1
 		__info_msg "编译uefi及legacy固件"
 	else
 		__info_msg "编译uefi、legacy固件由.config文件决定"

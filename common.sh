@@ -619,73 +619,17 @@ function modify_config() {
 		__info_msg "官方源码, '状态'、'系统'等主菜单检测设置"
 	fi
 	
-	# Lede源码: 修复lxc固件openssl无法打开后台管理界面, 以wolfssl替代openssl(仅lede源码需要修改, 官方不需要)
+	# Lede源码: 修复lxc固件openssl无法打开后台管理界面(仅lede源码需要修改, 官方不需要)
+	# 取消勾选Libraries-->SSL-->libopenssl-->Acceleration support through /dev/crypto
+	# 或者，以wolfssl替代openssl(在20250312之前的commit)
 	if [[ $FIRMWARE_TYPE == "lxc" &&  $SOURCE =~ (lede|Lede|LEDE) ]]; then
-		# 依赖关系
-		# LuCI -> Collections ->  [ ] luci-ssl(依赖libustream-mbedtls)
-		# LuCI -> Collections ->  [ ] luci-ssl-openssl(依赖libustream-openssl)
-		# Utilities           ->  [ ] cache-domains-mbedtls(依赖libustream-mbedtls)
-		# Utilities           ->  [ ] cache-domains-openssl(依赖libustream-openssl)
-		# Utilities           ->      cache-domains-wolfssl(依赖libustream-wolfssl)
-		# 库
-		# Libraries           ->  [ ] libustream-mbedtls(库文件, 三选一, 依赖libmbedtls)
-		# Libraries           ->  [ ] libustream-openssl(库文件, 三选一, 依赖libopenssl)
-		# Libraries           ->  [*] libustream-wolfssl(库文件, 三选一, 依赖libwolfssl)
-		# Libraries  ->  SSL  ->  [*] libmbedtls(库文件, 自动勾选, 无需关注)
-		# Libraries  ->  SSL  ->  [*] libopenssl(库文件, 自动勾选, 无需关注)
-		# Libraries  ->  SSL  ->  [*] libwolfssl(库文件, 自动勾选, 无需关注)
-		# 插件
-		# LuCI->Applications  ->  [ ] luci-app-cshark(依赖Network->cshark,cshark依赖libustream-mbedtls)
-		
-		sed -Ei 's/.*(CONFIG_PACKAGE_libustream-wolfssl).*/\1=y/g' $HOME_PATH/.config
-		sed -Ei 's/.*(CONFIG_PACKAGE_libustream-mbedtls).*/# \1 is not set/g' $HOME_PATH/.config
-		sed -Ei 's/.*(CONFIG_PACKAGE_libustream-openssl).*/# \1 is not set/g' $HOME_PATH/.config
-		sed -i '/CONFIG_PACKAGE_luci-ssl-openssl=y/d' $HOME_PATH/.config
-		sed -i '/CONFIG_PACKAGE_luci-ssl=y/d' $HOME_PATH/.config
-		sed -i '/CONFIG_PACKAGE_luci-app-cshark=y/d' $HOME_PATH/.config
-		#sed -i '$a # CONFIG_PACKAGE_luci-ssl-openssl is not set' $HOME_PATH/.config
-		#sed -i '$a # CONFIG_PACKAGE_luci-ssl is not set' $HOME_PATH/.config
-		#sed -i '$a # CONFIG_PACKAGE_luci-app-cshark is not set' $HOME_PATH/.config
-		
-		if [[ `grep -c "CONFIG_PACKAGE_cache-domains-mbedtls=y" $HOME_PATH/.config` -ge '1' || `grep -c "CONFIG_PACKAGE_cache-domains-openssl=y" $HOME_PATH/.config` -ge '1' ]]; then
-			sed -Ei 's/.*(CONFIG_PACKAGE_cache-domains-wolfssl).*/\1=y/g' $HOME_PATH/.config
-			sed -Ei 's/.*(CONFIG_PACKAGE_cache-domains-mbedtls).*/# \1 is not set/g' $HOME_PATH/.config
-			sed -Ei 's/.*(CONFIG_PACKAGE_cache-domains-openssl).*/# \1 is not set/g' $HOME_PATH/.config
-			echo "__error_msg \"lxc固件下, 您选择cache-domains-mbedtls或cache-domains-openssl, 与cache-domains-wolfssl库有冲突, 替换为cache-domains-wolfssl\"" >> $CONFFLICTIONS
-			echo "" >> $CONFFLICTIONS
-		fi
-	else
-		# 非lede源码lxc模式的其它固件: openwrt的所有固件、lede普通固件		
-		# 非强制使用openssl, 由.config决定, 只解决冲突
-		if [[ `grep -c "CONFIG_PACKAGE_libustream-openssl=y" $HOME_PATH/.config` -ge '1' ]]; then
-			if [[ `grep -c "CONFIG_PACKAGE_libustream-mbedtls=y" $HOME_PATH/.config` -ge '1' ]]; then
-				sed -Ei 's/.*(CONFIG_PACKAGE_libustream-mbedtls).*/# \1 is not set/g' $HOME_PATH/.config
-				echo "__error_msg \"您同时选择libustream-mbedtls和libustream-openssl, 库有冲突, 只能二选一, 已删除libustream-mbedtls库\"" >> $CONFFLICTIONS
-				echo "" >> $CONFFLICTIONS
-			fi
-			# libustream-wolfssl可能处于=y或=m状态
-			if [[ `grep -c "CONFIG_PACKAGE_libustream-wolfssl=y" $HOME_PATH/.config` -ge '1' || `grep -c "CONFIG_PACKAGE_libustream-wolfssl=m" $HOME_PATH/.config` -ge '1' ]]; then
-				sed -Ei 's/.*(CONFIG_PACKAGE_libustream-wolfssl).*/# \1 is not set/g' $HOME_PATH/.config
-				echo "__error_msg \"您同时选择libustream-wolfssl和libustream-openssl, 库有冲突, 只能二选一, 已删除libustream-wolfssl库\"" >> $CONFFLICTIONS
-				echo "" >> $CONFFLICTIONS
-			fi
-			# luci-ssl(依赖于旧的libustream-mbedtls), 替换为luci-ssl-openssl(依赖于libustream-openssl)
-			if [[ `grep -c "CONFIG_PACKAGE_luci-ssl=y" $HOME_PATH/.config` -ge '1' ]]; then
-				sed -i 's/CONFIG_PACKAGE_luci-ssl=y/# CONFIG_PACKAGE_luci-ssl is not set/g' $HOME_PATH/.config
-				sed -Ei 's/.*(CONFIG_PACKAGE_luci-ssl-openssl).*/\1=y/g' $HOME_PATH/.config
-				echo "__error_msg \"您选择luci-ssl(依赖于旧的libustream-mbedtls), 与libustream-openssl库有冲突, 替换为luci-ssl-openssl(依赖于libustream-openssl)\"" >> $CONFFLICTIONS
-				echo "" >> $CONFFLICTIONS
-			fi
-			# cache-domains-mbedtls(依赖于旧的libustream-mbedtls), cache-domains-wolfssl（依赖于libustream-wolfssl）
-			# 替换为cache-domains-openssl（依赖于libustream-openssl）
-			if [[ `grep -c "CONFIG_PACKAGE_cache-domains-mbedtls=y" $HOME_PATH/.config` -ge '1' || `grep -c "CONFIG_PACKAGE_cache-domains-wolfssl=y" $HOME_PATH/.config` -ge '1' ]]; then
-				sed -i '/CONFIG_PACKAGE_cache-domains-mbedtls/d' $HOME_PATH/.config
-				sed -i '/CONFIG_PACKAGE_cache-domains-wolfssl/d' $HOME_PATH/.config
-				sed -Ei 's/.*(CONFIG_PACKAGE_cache-domains-openssl).*/\1=y/g' $HOME_PATH/.config
-				echo "__error_msg \"您选择cache-domains-mbedtls或cache-domains-wolfssl, 与cache-domains-openssl库有冲突, 替换为cache-domains-openssl\"" >> $CONFFLICTIONS
-				echo "" >> $CONFFLICTIONS
-			fi
-		fi
+		sed -i '/CONFIG_OPENSSL_ENGINE_BUILTIN_DEVCRYPTO/d' $HOME_PATH/.config
+		sed -i '/CONFIG_PACKAGE_kmod-crypto-authenc/d' $HOME_PATH/.config
+		sed -i '/CONFIG_PACKAGE_kmod-cryptodev/d' $HOME_PATH/.config
+
+		sed -i '$a\# CONFIG_OPENSSL_ENGINE_BUILTIN_DEVCRYPTO is not set' $HOME_PATH/.config
+		sed -i '$a\CONFIG_PACKAGE_kmod-crypto-authenc=y' $HOME_PATH/.config
+		sed -i '$a\CONFIG_PACKAGE_kmod-cryptodev=y' $HOME_PATH/.config
 	fi
 	
 	if [[ `grep -c "CONFIG_TARGET_x86=y" $HOME_PATH/.config` -eq '1' || `grep -c "CONFIG_TARGET_rockchip=y" $HOME_PATH/.config` -eq '1' || `grep -c "CONFIG_TARGET_bcm27xx=y" $HOME_PATH/.config` -eq '1' ]]; then

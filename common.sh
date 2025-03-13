@@ -43,6 +43,7 @@ function parse_settings() {
 
 	source "$SETTINGS_INI"
 
+	# 手动运行workflow时, 获取输入参数, 或从settings.ini获取默认值
 	if [[ -n "$INPUTS_LUCI_EDITION" ]]; then
 		[[ $INPUTS_LUCI_EDITION =~ (default|DEFAULT|Default) ]] && LUCI_EDITION="$LUCI_EDITION" || LUCI_EDITION="$INPUTS_LUCI_EDITION"
 		[[ $INPUTS_CONFIG_FILE =~ (default|DEFAULT|Default) ]] && CONFIG_FILE="$CONFIG_FILE" || CONFIG_FILE="$INPUTS_CONFIG_FILE"
@@ -1190,7 +1191,7 @@ function update_repo() {
 	cd "$repo_path" || exit
 
 	# 更新settings.ini文件
-	local settings_array=(LUCI_EDITION CONFIG_FILE FIRMWARE_TYPE BIOS_MODE UPLOAD_CONFIG UPLOAD_FIRMWARE UPLOAD_RELEASE ENABLE_CCACHE)
+	local settings_array=(LUCI_EDITION CONFIG_FILE BIOS_MODE ENABLE_CCACHE UPLOAD_FIRMWARE UPLOAD_RELEASE)
 	for x in "${settings_array[@]}"; do
 		local settings_key="$(grep -E "$x=" $SETTINGS_INI | sed 's/^[ ]*//g' | grep -v '^#' | awk '{print $1}' | awk -F'=' '{print $1}')"
 		local settings_val="$(grep -E "$x=" $SETTINGS_INI | sed 's/^[ ]*//g' | grep -v '^#' | awk '{print $1}' | awk -F'=' '{print $2}' | sed 's#"##g')"

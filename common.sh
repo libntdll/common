@@ -71,7 +71,7 @@ function parse_settings() {
 	;;
 	openwrt|Openwrt|OpenWrt|OpenWRT|OPENWRT|official|Official|OFFICIAL)
 		SOURCE_URL="https://github.com/openwrt/openwrt"
-		SOURCE="official"
+		SOURCE="openwrt"
 		SOURCE_OWNER="openwrt's"
 		if [[ $LUCI_EDITION =~ (main|master) ]]; then
 			SOURCE_BRANCH=$LUCI_EDITION

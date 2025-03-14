@@ -46,7 +46,7 @@ function parse_settings() {
 	# 自动运行workflow时, $INPUTS_LUCI_EDITION为空，不运行此条件, 从settings.ini获取默认值;
 	if [[ -n "$INPUTS_LUCI_EDITION" ]]; then
 		[[ $INPUTS_LUCI_EDITION =~ (default|DEFAULT|Default) ]] || LUCI_EDITION="$INPUTS_LUCI_EDITION"
-		[[ $INPUTS_PACKAGES_REPO =~ (default|DEFAULT|Default) ]] || PACKAGES_REPO="$INPUTS_PACKAGES_REPO"
+		[[ $INPUTS_PACKAGES_BRANCH =~ (default|DEFAULT|Default) ]] || PACKAGES_BRANCH="$INPUTS_PACKAGES_BRANCH"
 		[[ $INPUTS_CONFIG_FILE =~ (default|DEFAULT|Default) ]] || CONFIG_FILE="$INPUTS_CONFIG_FILE"
 		[[ $INPUTS_BIOS_MODE =~ (default|DEFAULT|Default) ]] || BIOS_MODE="$INPUTS_BIOS_MODE"
 		[[ $INPUTS_ENABLE_CCACHE =~ (default|DEFAULT|Default) ]] || ENABLE_CCACHE="$INPUTS_ENABLE_CCACHE"

@@ -233,10 +233,10 @@ function git_clone_source() {
 
 	# 将build等文件夹复制到openwrt文件夹下
 	cd "$GITHUB_WORKSPACE" || exit
-	cp -rf "$(find ./ -maxdepth 1 -type d ! -path './openwrt' ! -path './')" "$HOME_PATH"
+	cp -rf "$(find ./ -maxdepth 1 -type d ! -path './openwrt' ! -path './')" "$HOME_PATH/"
 
 	# 下载common仓库
-	sudo rm -rf "$COMMON_PATH" && git clone -b main --depth 1 https://github.com/libntdll/common $COMMON_PATH
+	sudo rm -rf "$COMMON_PATH" && git clone -b main --depth 1 https://github.com/libntdll/common "$COMMON_PATH"
 	chmod -Rf +x "$BUILD_PATH"
 
 }

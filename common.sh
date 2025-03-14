@@ -302,11 +302,8 @@ function update_feeds() {
 	if [[ $SOURCE =~ (lede|Lede|LEDE) ]]; then
 		if [ "$LUCI_EDITION" == "18.06" ]; then
 			sed -i '/^src-git luci https:\/\/github.com\/coolsnowwolf\/luci.git/c\src-git luci https:\/\/github.com\/coolsnowwolf\/luci.git' $feeds_file
-		elif [ "$LUCI_EDITION" == "23.05" ]; then
-			sed -i "/^src-git luci https:\/\/github.com\/coolsnowwolf\/luci.git/c\src-git luci https:\/\/github.com\/coolsnowwolf\/luci.git;openwrt-$LUCI_EDITION" $feeds_file
 		else
-			echo "Invalid value for luci version: $LUCI_EDITION"
-			exit 1
+			sed -i "/^src-git luci https:\/\/github.com\/coolsnowwolf\/luci.git/c\src-git luci https:\/\/github.com\/coolsnowwolf\/luci.git;openwrt-$LUCI_EDITION" $feeds_file
 		fi
 	fi
 

@@ -229,11 +229,11 @@ function init_environment() {
 function git_clone_source() {
 	# 在每matrix.target目录下下载源码
 	git clone -b $SOURCE_BRANCH $SOURCE_URL openwrt >/dev/null 2>&1
-	ln -sf "/$MATRIX_TARGET/openwrt" "$HOME_PATH"
+	ln -sf /$MATRIX_TARGET/openwrt $HOME_PATH
 
 	# 将build等文件夹复制到openwrt文件夹下
-	cd "$GITHUB_WORKSPACE" || exit
-	cp -rf "$(find ./ -maxdepth 1 -type d ! -path './openwrt' ! -path './')" "$HOME_PATH/"
+	cd $GITHUB_WORKSPACE || exit
+	cp -rf $(find ./ -maxdepth 1 -type d ! -path './openwrt' ! -path './') $HOME_PATH/
 
 	# 下载common仓库
 	sudo rm -rf "$COMMON_PATH" && git clone -b main --depth 1 https://github.com/libntdll/common "$COMMON_PATH"

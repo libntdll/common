@@ -38,10 +38,7 @@ function __white_color() {
 # 环境变量
 ################################################################################################################
 function parse_settings() {
-	HOME_PATH="$GITHUB_WORKSPACE/openwrt"
-	SETTINGS_INI="$HOME_PATH/build/$MATRIX_TARGET/settings.ini"
-
-	source "$SETTINGS_INI"
+	source "build/$MATRIX_TARGET/settings.ini"
 
 	# 手动运行workflow时, 获取输入参数, 或从settings.ini获取默认值
 	if [[ -n "$INPUTS_LUCI_EDITION" ]]; then
@@ -143,6 +140,7 @@ function parse_settings() {
 	echo "COMPILE_DATE_STAMP=$(date -d "$(date +'%Y-%m-%d %H:%M:%S')" +%s)" >>"$GITHUB_ENV"
 
 	# 路径
+	HOME_PATH="$GITHUB_WORKSPACE/openwrt"
 	echo "HOME_PATH=$HOME_PATH" >>"$GITHUB_ENV"
 	echo "BIN_PATH=$HOME_PATH/bin" >>"$GITHUB_ENV"
 	echo "AUTOUPDATE_PATH=$HOME_PATH/bin/autoupdate" >>"$GITHUB_ENV"
@@ -156,7 +154,7 @@ function parse_settings() {
 	echo "DIFFCONFIG_TXT=$HOME_PATH/diffconfig.txt" >>"$GITHUB_ENV"
 	echo "RELEASE_MD=$HOME_PATH/release.md" >>"$GITHUB_ENV"
 	echo "RELEASEINFO_MD=$HOME_PATH/build/$MATRIX_TARGET/release/releaseinfo.md" >>"$GITHUB_ENV"
-	echo "SETTINGS_INI=$SETTINGS_INI" >>"$GITHUB_ENV"
+	echo "SETTINGS_INI=$HOME_PATH/build/$MATRIX_TARGET/settings.ini" >>"$GITHUB_ENV"
 	echo "FILES_TO_CLEAR=$HOME_PATH/default_clear" >>"$GITHUB_ENV"
 	echo "CONFFLICTIONS=$HOME_PATH/confflictions" >>"$GITHUB_ENV"
 
@@ -1153,8 +1151,7 @@ function compile_info() {
 	echo "#### 插件列表 :rocket:" >>"$GITHUB_STEP_SUMMARY"
 	nl "$HOME_PATH/plugins_info" >>"$GITHUB_STEP_SUMMARY"
 
-	local pluginsnr
-	pluginsnr="$(nl "$HOME_PATH/plugins_info" | sed 's/$/\"/g' | sed 's/^/__blue_color \"/g')"
+	local pluginsnr="$(nl "$HOME_PATH/plugins_info" | sed 's/$/\"/g' | sed 's/^/__blue_color \"/g')"
 
 	echo "$pluginsnr" >"$HOME_PATH/plugins_info"
 	if [ -s "$HOME_PATH/plugins_info" ]; then
@@ -1215,8 +1212,7 @@ function update_repo() {
 	# 提交commit, 更新repo
 	cd "$repo_path" || exit
 
-	local branch_head
-	branch_head="$(git rev-parse --abbrev-ref HEAD)"
+	local branch_head="$(git rev-parse --abbrev-ref HEAD)"
 	if [[ "$ENABLE_REPO_UPDATE" == "true" ]]; then
 		git add .
 		git commit -m "[$MATRIX_TARGET] Update $CONFIG_FILE and settings.ini, etc. "
@@ -1247,7 +1243,6 @@ function organize_firmware() {
 	sudo rm -rf packages >/dev/null 2>&1
 	sudo rm -rf "$FILES_TO_CLEAR"
 
-	__yellow_color "开始准备固件自动更新相关固件..."
 	__yellow_color "开始准备固件自动更新相关固件..."
 	if [[ ! -d "${AUTOUPDATE_PATH:-}" ]]; then
 		mkdir -p "$AUTOUPDATE_PATH"

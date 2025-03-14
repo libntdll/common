@@ -48,8 +48,6 @@ function parse_settings() {
 		[[ $INPUTS_ENABLE_CCACHE =~ (default|DEFAULT|Default) ]] && ENABLE_CCACHE="$ENABLE_CCACHE" || ENABLE_CCACHE="$INPUTS_ENABLE_CCACHE"
 		[[ $INPUTS_UPLOAD_FIRMWARE =~ (default|DEFAULT|Default) ]] && UPLOAD_FIRMWARE="$UPLOAD_FIRMWARE" || UPLOAD_FIRMWARE="$INPUTS_UPLOAD_FIRMWARE"
 		[[ $INPUTS_UPLOAD_RELEASE =~ (default|DEFAULT|Default) ]] && UPLOAD_RELEASE="$UPLOAD_RELEASE" || UPLOAD_RELEASE="$INPUTS_UPLOAD_RELEASE"
-
-		ENABLE_SSH="$INPUTS_ENABLE_SSH"
 	fi
 
 	if [[ $NOTICE_TYPE =~ (TG|telegram|Telegram|TELEGRAM) ]]; then
@@ -114,7 +112,6 @@ function parse_settings() {
 	echo "FIRMWARE_TYPE=$FIRMWARE_TYPE" >>"$GITHUB_ENV"
 	echo "BIOS_MODE=$BIOS_MODE" >>"$GITHUB_ENV"
 	echo "ENABLE_CCACHE=$ENABLE_CCACHE" >>"$GITHUB_ENV"
-	echo "ENABLE_SSH=$ENABLE_SSH" >>"$GITHUB_ENV"
 	echo "UPLOAD_CONFIG=$UPLOAD_CONFIG" >>"$GITHUB_ENV"
 	echo "UPLOAD_FIRMWARE=$UPLOAD_FIRMWARE" >>"$GITHUB_ENV"
 	echo "UPLOAD_RELEASE=$UPLOAD_RELEASE" >>"$GITHUB_ENV"
@@ -153,7 +150,7 @@ function parse_settings() {
 	echo "DIFFCONFIG_TXT=$HOME_PATH/diffconfig.txt" >>"$GITHUB_ENV"
 	echo "RELEASE_MD=$HOME_PATH/release.md" >>"$GITHUB_ENV"
 	echo "RELEASEINFO_MD=$HOME_PATH/build/$MATRIX_TARGET/release/releaseinfo.md" >>"$GITHUB_ENV"
-	echo "SETTINGS_INI=$HOME_PATH/build/$MATRIX_TARGET/settings.ini" >>"$GITHUB_ENV"
+	# echo "SETTINGS_INI=$HOME_PATH/build/$MATRIX_TARGET/settings.ini" >>"$GITHUB_ENV"
 	echo "FILES_TO_CLEAR=$HOME_PATH/default_clear" >>"$GITHUB_ENV"
 	echo "CONFFLICTIONS=$HOME_PATH/confflictions" >>"$GITHUB_ENV"
 
@@ -583,7 +580,7 @@ function modify_config() {
 
 	# 缓存加速
 	if [[ $ENABLE_CCACHE =~ (true|True|TRUE) ]]; then
-		__info_msg "开启缓存加速, 如编译出错, 请尝试删除缓存, 或切换为普通加速, 或关闭缓存加速"
+		__info_msg "开启缓存加速, 如编译出错, 请尝试关闭缓存加速"
 		sed -i '/CONFIG_DEVEL/d' "$HOME_PATH/.config" >/dev/null 2>&1
 		sed -i '/CONFIG_CCACHE/d' "$HOME_PATH/.config" >/dev/null 2>&1
 		sed -i '$a\CONFIG_DEVEL=y' "$HOME_PATH/.config" >/dev/null 2>&1
@@ -1176,7 +1173,7 @@ function update_repo() {
 	local repo_path="$GITHUB_WORKSPACE/repo"
 	local repo_matrix_target_path="$repo_path/build/$MATRIX_TARGET"
 	local repo_config_file="$repo_matrix_target_path/config/$CONFIG_FILE"
-	local repo_settings_ini="$repo_matrix_target_path/settings.ini"
+	# local repo_settings_ini="$repo_matrix_target_path/settings.ini"
 
 	[[ -d "$repo_path" ]] && rm -rf "$repo_path"
 
@@ -1186,19 +1183,19 @@ function update_repo() {
 	cd "$repo_path" || exit
 
 	# 更新settings.ini文件
-	local settings_array=(LUCI_EDITION CONFIG_FILE BIOS_MODE ENABLE_CCACHE UPLOAD_FIRMWARE UPLOAD_RELEASE)
-	for x in "${settings_array[@]}"; do
-		local settings_key="$(grep -E "$x=" $SETTINGS_INI | sed 's/^[ ]*//g' | grep -v '^#' | awk '{print $1}' | awk -F'=' '{print $1}')"
-		local settings_val="$(grep -E "$x=" $SETTINGS_INI | sed 's/^[ ]*//g' | grep -v '^#' | awk '{print $1}' | awk -F'=' '{print $2}' | sed 's#"##g')"
-		eval eval env_settings_val=\$$x
-		if [[ -n "$settings_key" ]]; then
-			sed -i "s#$x=\"${settings_val}\"#$x=\"${env_settings_val}\"#g" "$SETTINGS_INI"
-		fi
-	done
-	if [[ "$(cat $SETTINGS_INI)" != "$(cat $repo_settings_ini)" ]]; then
-		ENABLE_REPO_UPDATE="true"
-		cp -rf "$SETTINGS_INI" "$repo_settings_ini"
-	fi
+	# local settings_array=(LUCI_EDITION CONFIG_FILE BIOS_MODE ENABLE_CCACHE UPLOAD_FIRMWARE UPLOAD_RELEASE)
+	# for x in "${settings_array[@]}"; do
+	# 	local settings_key="$(grep -E "$x=" $SETTINGS_INI | sed 's/^[ ]*//g' | grep -v '^#' | awk '{print $1}' | awk -F'=' '{print $1}')"
+	# 	local settings_val="$(grep -E "$x=" $SETTINGS_INI | sed 's/^[ ]*//g' | grep -v '^#' | awk '{print $1}' | awk -F'=' '{print $2}' | sed 's#"##g')"
+	# 	eval eval env_settings_val=\$$x
+	# 	if [[ -n "$settings_key" ]]; then
+	# 		sed -i "s#$x=\"${settings_val}\"#$x=\"${env_settings_val}\"#g" "$SETTINGS_INI"
+	# 	fi
+	# done
+	# if [[ "$(cat $SETTINGS_INI)" != "$(cat $repo_settings_ini)" ]]; then
+	# 	ENABLE_REPO_UPDATE="true"
+	# 	cp -rf "$SETTINGS_INI" "$repo_settings_ini"
+	# fi
 
 	# 更新.config文件
 	# $HOME_PATH/scripts/diffconfig.sh > $DIFFCONFIG_TXT
@@ -1213,7 +1210,7 @@ function update_repo() {
 	local branch_head="$(git rev-parse --abbrev-ref HEAD)"
 	if [[ "$ENABLE_REPO_UPDATE" == "true" ]]; then
 		git add .
-		git commit -m "[$MATRIX_TARGET] Update $CONFIG_FILE and settings.ini, etc. "
+		git commit -m "[$MATRIX_TARGET] Update $CONFIG_FILE, etc. "
 		git push --force "https://$REPO_TOKEN@github.com/$GITHUB_REPOSITORY" HEAD:$branch_head
 		__success_msg "Your branch origin/$branch_head is now up to the latest."
 	else

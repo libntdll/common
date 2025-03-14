@@ -40,14 +40,17 @@ function __white_color() {
 function parse_settings() {
 	source "build/$MATRIX_TARGET/settings.ini"
 
-	# 手动运行workflow时, 获取输入参数, 或从settings.ini获取默认值
+	# 手动运行workflow时(同样适用于compile.xml), 
+	# 	1、选项为default时, 从settings.ini获取默认值;
+	# 	2、选项不为default时, 从workflow的输入框获取值;
+	# 自动运行workflow时, $INPUTS_LUCI_EDITION为空，不运行此条件, 从settings.ini获取默认值;
 	if [[ -n "$INPUTS_LUCI_EDITION" ]]; then
-		[[ $INPUTS_LUCI_EDITION =~ (default|DEFAULT|Default) ]] && LUCI_EDITION="$LUCI_EDITION" || LUCI_EDITION="$INPUTS_LUCI_EDITION"
-		[[ $INPUTS_CONFIG_FILE =~ (default|DEFAULT|Default) ]] && CONFIG_FILE="$CONFIG_FILE" || CONFIG_FILE="$INPUTS_CONFIG_FILE"
-		[[ $INPUTS_BIOS_MODE =~ (default|DEFAULT|Default) ]] && BIOS_MODE="$BIOS_MODE" || BIOS_MODE="$INPUTS_BIOS_MODE"
-		[[ $INPUTS_ENABLE_CCACHE =~ (default|DEFAULT|Default) ]] && ENABLE_CCACHE="$ENABLE_CCACHE" || ENABLE_CCACHE="$INPUTS_ENABLE_CCACHE"
-		[[ $INPUTS_UPLOAD_FIRMWARE =~ (default|DEFAULT|Default) ]] && UPLOAD_FIRMWARE="$UPLOAD_FIRMWARE" || UPLOAD_FIRMWARE="$INPUTS_UPLOAD_FIRMWARE"
-		[[ $INPUTS_UPLOAD_RELEASE =~ (default|DEFAULT|Default) ]] && UPLOAD_RELEASE="$UPLOAD_RELEASE" || UPLOAD_RELEASE="$INPUTS_UPLOAD_RELEASE"
+		[[ $INPUTS_LUCI_EDITION =~ (default|DEFAULT|Default) ]] || LUCI_EDITION="$INPUTS_LUCI_EDITION"
+		[[ $INPUTS_CONFIG_FILE =~ (default|DEFAULT|Default) ]] || CONFIG_FILE="$INPUTS_CONFIG_FILE"
+		[[ $INPUTS_BIOS_MODE =~ (default|DEFAULT|Default) ]] || BIOS_MODE="$INPUTS_BIOS_MODE"
+		[[ $INPUTS_ENABLE_CCACHE =~ (default|DEFAULT|Default) ]] || ENABLE_CCACHE="$INPUTS_ENABLE_CCACHE"
+		[[ $INPUTS_UPLOAD_FIRMWARE =~ (default|DEFAULT|Default) ]] || UPLOAD_FIRMWARE="$INPUTS_UPLOAD_FIRMWARE"
+		[[ $INPUTS_UPLOAD_RELEASE =~ (default|DEFAULT|Default) ]] || UPLOAD_RELEASE="$INPUTS_UPLOAD_RELEASE"
 	fi
 
 	if [[ $NOTICE_TYPE =~ (TG|telegram|Telegram|TELEGRAM) ]]; then
@@ -342,7 +345,7 @@ function update_feeds() {
 		find "$FEEDS_PATH" -maxdepth 3 -type d -name "$X" | grep -v "$packages" | xargs sudo rm -rf {}
 	done
 
-	# 设置中文语言包(官方: zh_Hans, Lede: zh-cn；对缺失相应文件的插件进行补充)
+	# 设置中文语言包(官方: zh_Hans, Lede: zh-cn; 对缺失相应文件的插件进行补充)
 	__yellow_color "开始设置中文语言包..."
 	for e in $(ls -d $FEEDS_PATH/$packages/luci-*/po); do
 		if [[ -d $e/zh-cn && ! -d $e/zh_Hans ]]; then
@@ -620,7 +623,7 @@ function modify_config() {
 
 	# Lede源码: 修复lxc固件openssl无法打开后台管理界面(仅lede源码需要修改, 官方不需要)
 	# 取消勾选Libraries-->SSL-->libopenssl-->Acceleration support through /dev/crypto
-	# 或者，以wolfssl替代openssl(在20250312之前的commit)
+	# 或者, 以wolfssl替代openssl(在20250312之前的commit)
 	if [[ $FIRMWARE_TYPE == "lxc" && $SOURCE =~ (lede|Lede|LEDE) ]]; then
 		sed -i '/CONFIG_OPENSSL_ENGINE_BUILTIN_DEVCRYPTO/d' "$HOME_PATH/.config"
 		sed -i '/CONFIG_PACKAGE_kmod-crypto-authenc/d' "$HOME_PATH/.config"

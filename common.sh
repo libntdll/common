@@ -128,7 +128,6 @@ function parse_settings() {
 	echo "SOURCE_URL=$SOURCE_URL" >>"$GITHUB_ENV"
 	echo "SOURCE_BRANCH=$SOURCE_BRANCH" >>"$GITHUB_ENV"
 	echo "SOURCE_OWNER=$SOURCE_OWNER" >>"$GITHUB_ENV"
-	echo "ENABLE_PACKAGES_UPDATE=$ENABLE_PACKAGES_UPDATE" >>"$GITHUB_ENV"
 	echo "ENABLE_REPO_UPDATE=false" >>"$GITHUB_ENV"
 	echo "GITHUB_API=zzz_api" >>"$GITHUB_ENV"
 
@@ -228,17 +227,16 @@ function init_environment() {
 ################################################################################################################
 function git_clone_source() {
 	# 在每matrix.target目录下下载源码
-	git clone -b $SOURCE_BRANCH $SOURCE_URL openwrt >/dev/null 2>&1
-	ln -sf /$MATRIX_TARGET/openwrt $HOME_PATH
+	git clone -b "$SOURCE_BRANCH" "$SOURCE_URL" openwrt >/dev/null 2>&1
+	ln -sf "/$MATRIX_TARGET/openwrt" "$HOME_PATH"
 
 	# 将build等文件夹复制到openwrt文件夹下
-	cd $GITHUB_WORKSPACE || exit
-	cp -rf $(find ./ -maxdepth 1 -type d ! -path './openwrt' ! -path './') $HOME_PATH/
+	cd "$GITHUB_WORKSPACE" || exit
+	find ./ -maxdepth 1 -type d ! -path './openwrt' ! -path './' -print0 | xargs -0 -I {} cp -rf {} "$HOME_PATH"
 
 	# 下载common仓库
 	sudo rm -rf "$COMMON_PATH" && git clone -b main --depth 1 https://github.com/libntdll/common "$COMMON_PATH"
 	chmod -Rf +x "$BUILD_PATH"
-
 }
 
 ################################################################################################################
@@ -1309,7 +1307,7 @@ function organize_firmware() {
 
 		ipk_files=$(find "$HOME_PATH/bin/packages/" -type f -name "*.ipk")
 		if [ -n "$ipk_files" ]; then
-			cp -rf "$ipk_files" "$FIRMWARE_PATH/ipk/" && sync
+			echo "$ipk_files" | xargs -I {} cp -rf {} "$FIRMWARE_PATH/ipk/" && sync
 		else
 			__info_msg "No .ipk files found in $HOME_PATH/bin/packages/"
 		fi

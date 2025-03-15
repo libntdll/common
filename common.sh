@@ -38,9 +38,10 @@ function __white_color() {
 # 环境变量
 ################################################################################################################
 function parse_settings() {
-	source "build/$MATRIX_TARGET/settings.ini"
+	# shellcheck disable=SC1090
+	source "$GITHUB_WORKSPACE/build/$MATRIX_TARGET/settings.ini"
 
-	# 手动运行workflow时(同样适用于compile.xml), 
+	# 手动运行workflow时(同样适用于compile.xml),
 	# 	1、选项为default时, 从settings.ini获取默认值;
 	# 	2、选项不为default时, 从workflow的输入框获取值;
 	# 自动运行workflow时, $INPUTS_LUCI_EDITION为空，不运行此条件, 从settings.ini获取默认值;
@@ -90,7 +91,7 @@ function parse_settings() {
 		SOURCE_URL="https://github.com/immortalwrt/immortalwrt"
 		SOURCE="immortalwrt"
 		SOURCE_OWNER="Immortalwrt's"
-		LUCI_EDITION="$(echo $SOURCE_BRANCH | sed 's/openwrt-//g')"
+		LUCI_EDITION="${SOURCE_BRANCH#openwrt-}"
 		if [[ $LUCI_EDITION =~ (main|master) ]]; then
 			SOURCE_BRANCH=$LUCI_EDITION
 		else
@@ -108,6 +109,7 @@ function parse_settings() {
 	fi
 
 	# 基础设置
+	# shellcheck disable=SC2129
 	echo "LUCI_EDITION=$LUCI_EDITION" >>"$GITHUB_ENV"
 	echo "CONFIG_FILE=$CONFIG_FILE" >>"$GITHUB_ENV"
 	echo "FIRMWARE_TYPE=$FIRMWARE_TYPE" >>"$GITHUB_ENV"
@@ -138,6 +140,7 @@ function parse_settings() {
 
 	# 路径
 	HOME_PATH="$GITHUB_WORKSPACE/openwrt"
+	# shellcheck disable=SC2129
 	echo "HOME_PATH=$HOME_PATH" >>"$GITHUB_ENV"
 	echo "BIN_PATH=$HOME_PATH/bin" >>"$GITHUB_ENV"
 	echo "AUTOUPDATE_PATH=$HOME_PATH/bin/autoupdate" >>"$GITHUB_ENV"
@@ -167,6 +170,8 @@ function parse_settings() {
 	echo "FILENAME_CONFIG_GEN=config_generate" >>"$GITHUB_ENV"
 	echo "FILENAME_TO_DELETE=default_delete" >>"$GITHUB_ENV"
 
+	# shellcheck disable=SC2155
+	# shellcheck disable=SC2002
 	local cpu_name=$(cat /proc/cpuinfo | grep name | cut -d: -f2 | uniq | sed 's/^[[:space:]]\+//')
 	echo "::notice title=GithubCPU::$cpu_name"
 	echo "::notice title=编译时间::$(date +'%Y-%m-%d %H:%M:%S')"
@@ -192,9 +197,9 @@ function notice_begin() {
 ################################################################################################################
 function notice_end() {
 	if [[ "$NOTICE_TYPE" == "TG" ]]; then
-		curl -k --data chat_id="$TELEGRAM_CHAT_ID" --data "text=🎉 我亲爱的✨主人✨: 您使用【$REPOSITORY】仓库【$MATRIX_TARGET】文件夹编译的【$FIRMWARE_NAME_PREFIX】固件顺利编译完成了！💐 https://github.com/$GITHUB_REPOSITORY/releases" "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage"
+		curl -k --data chat_id="$TELEGRAM_CHAT_ID" --data "text=🎉 我亲爱的✨主人✨: 您使用【$REPOSITORY】仓库【$MATRIX_TARGET】文件夹编译的【$FIRMWARE_NAME_PREFIX】固件顺利编译完成了!💐 https://github.com/$GITHUB_REPOSITORY/releases" "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage"
 	elif [[ "$NOTICE_TYPE" == "PUSH" ]]; then
-		curl -k --data token="$PUSH_PLUS_TOKEN" --data title="【$SOURCE-$TARGET_PROFILE】编译成功" --data "content=🎉 我亲爱的✨主人✨: 您使用【$REPOSITORY】仓库【$MATRIX_TARGET】文件夹编译的【$FIRMWARE_NAME_PREFIX】固件顺利编译完成了！💐 https://github.com/$GITHUB_REPOSITORY/releases" "http://www.pushplus.plus/send"
+		curl -k --data token="$PUSH_PLUS_TOKEN" --data title="【$SOURCE-$TARGET_PROFILE】编译成功" --data "content=🎉 我亲爱的✨主人✨: 您使用【$REPOSITORY】仓库【$MATRIX_TARGET】文件夹编译的【$FIRMWARE_NAME_PREFIX】固件顺利编译完成了!💐 https://github.com/$GITHUB_REPOSITORY/releases" "http://www.pushplus.plus/send"
 	fi
 }
 
@@ -214,7 +219,9 @@ function init_environment() {
 	# sudo -E apt-get -qq clean
 	sudo timedatectl set-timezone "$TZ"
 	# "/"目录创建文件夹$MATRIX_TARGET
-	sudo mkdir -p /$MATRIX_TARGET
+	sudo mkdir -p /"$MATRIX_TARGET"
+	# shellcheck disable=SC2086
+	# shellcheck disable=SC2128
 	sudo chown $USER:$GROUPS /$MATRIX_TARGET
 	git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 	git config --global user.name "github-actions[bot]"
@@ -323,7 +330,7 @@ function update_feeds() {
 	__yellow_color "开始更新插件源..."
 	./scripts/feeds clean
 	./scripts/feeds update -a >/dev/null 2>&1
-	sudo rm -rf $FEEDS_PATH/$packages/{LICENSE,*README*,*readme*,.git,.github,.gitignore} >/dev/null 2>&1
+	sudo rm -rf "$FEEDS_PATH/$packages"/{LICENSE,*README*,*readme*,.git,.github,.gitignore} >/dev/null 2>&1
 
 	# 替换Node为预编译
 	rm -rf "$FEEDS_PATH/packages/lang/node"
@@ -342,11 +349,13 @@ function update_feeds() {
 
 	# 设置中文语言包(官方: zh_Hans, Lede: zh-cn; 对缺失相应文件的插件进行补充)
 	__yellow_color "开始设置中文语言包..."
-	for e in $(ls -d $FEEDS_PATH/$packages/luci-*/po); do
-		if [[ -d $e/zh-cn && ! -d $e/zh_Hans ]]; then
-			rm -rf $e/zh_Hans && ln -s zh-cn $e/zh_Hans 2>/dev/null
-		elif [[ -d $e/zh_Hans && ! -d $e/zh-cn ]]; then
-			rm -rf $e/zh-cn && ln -s zh_Hans $e/zh-cn 2>/dev/null
+	for e in "$FEEDS_PATH/$packages/luci-"*/po; do
+		if [[ -d ${e}/zh-cn && ! -d ${e}/zh_Hans ]]; then
+			# shellcheck disable=SC2086
+			rm -rf ${e}/zh_Hans && ln -s zh-cn ${e}/zh_Hans 2>/dev/null
+		elif [[ -d ${e}/zh_Hans && ! -d ${e}/zh-cn ]]; then
+			# shellcheck disable=SC2086
+			rm -rf ${e}/zh-cn && ln -s zh_Hans ${e}/zh-cn 2>/dev/null
 		fi
 	done
 
@@ -378,21 +387,21 @@ function diy_public() {
 
 	__yellow_color "开始替换diy文件夹内文件..."
 	# 替换编译前源码中对应目录文件
-	sudo rm -rf $MATRIX_TARGET_PATH/diy/{*README*,*readme*} >/dev/null 2>&1
+	sudo rm -rf "$MATRIX_TARGET_PATH"/diy/{*README*,*readme*} >/dev/null 2>&1
 	if [ -n "$(ls -A "$MATRIX_TARGET_PATH/diy" 2>/dev/null)" ]; then
-		cp -rf $MATRIX_TARGET_PATH/diy/* $HOME_PATH >/dev/null 2>&1
+		cp -rf "$MATRIX_TARGET_PATH"/diy/* "$HOME_PATH" >/dev/null 2>&1
 	fi
 
 	__yellow_color "开始替换files文件夹内文件..."
 	# 替换编译后固件中对应目录文件（备用）
-	sudo rm -rf $MATRIX_TARGET_PATH/files/{*README*,*readme*} >/dev/null 2>&1
+	sudo rm -rf "$MATRIX_TARGET_PATH"/files/{*README*,*readme*} >/dev/null 2>&1
 	if [ -n "$(ls -A "$MATRIX_TARGET_PATH/files" 2>/dev/null)" ]; then
-		cp -rf $MATRIX_TARGET_PATH/files $HOME_PATH >/dev/null 2>&1
+		cp -rf "$MATRIX_TARGET_PATH"/files "$HOME_PATH" >/dev/null 2>&1
 	fi
 
 	__yellow_color "开始执行补丁文件..."
 	# 打补丁
-	sudo rm -rf $MATRIX_TARGET_PATH/patches/{*README*,*readme*} >/dev/null 2>&1
+	sudo rm -rf "$MATRIX_TARGET_PATH"/patches/{*README*,*readme*} >/dev/null 2>&1
 	if [ -n "$(ls -A "$MATRIX_TARGET_PATH/patches" 2>/dev/null)" ]; then
 		find "$MATRIX_TARGET_PATH/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 --forward --no-backup-if-mismatch"
 	fi
@@ -412,15 +421,15 @@ function diy_public() {
 		for dir in "$HOME_PATH/feeds" "$HOME_PATH/package"; do
 			find "$dir" -type d -name "luci-app-autoupdate" -print0 | xargs -0 -I {} sudo rm -rf {}
 		done
-		if [[ -n "$(grep "luci-app-autoupdate" $HOME_PATH/include/target.mk)" ]]; then
-			sed -i 's/luci-app-autoupdate//g' $HOME_PATH/include/target.mk
+		if grep -q "luci-app-autoupdate" "$HOME_PATH/include/target.mk"; then
+			sed -i 's/luci-app-autoupdate//g' "$HOME_PATH"/include/target.mk
 		fi
 		__info_msg "lxc固件, 删除自动更新插件"
 	else
 		for dir in "$HOME_PATH/feeds" "$HOME_PATH/package"; do
 			find "$dir" -type d -name "luci-app-autoupdate" -print0 | xargs -0 -I {} sudo rm -rf {}
 		done
-		git clone https://github.com/libntdll/luci-app-autoupdate $HOME_PATH/package/luci-app-autoupdate 2>/dev/null
+		git clone https://github.com/libntdll/luci-app-autoupdate "$HOME_PATH"/package/luci-app-autoupdate 2>/dev/null
 		if [[ $(grep -c "luci-app-autoupdate" "$HOME_PATH/include/target.mk") -eq '0' ]]; then
 			sed -i 's/DEFAULT_PACKAGES:=/DEFAULT_PACKAGES:=luci-app-autoupdate luci-app-ttyd /g' "$HOME_PATH/include/target.mk"
 		fi
@@ -431,21 +440,22 @@ function diy_public() {
 		fi
 		# autoupdate插件版本
 		if [[ -f "$HOME_PATH/package/luci-app-autoupdate/root/usr/bin/autoupdate" ]]; then
+			# shellcheck disable=SC2062
 			AUTOUPDATE_VERSION=$(grep -Eo "Version=V[0-9.]+" "$HOME_PATH/package/luci-app-autoupdate/root/usr/bin/autoupdate" | grep -Eo [0-9.]+)
 			echo "AUTOUPDATE_VERSION=$AUTOUPDATE_VERSION" >>"$GITHUB_ENV"
 			__info_msg "luci-app-autoupdate版本: $AUTOUPDATE_VERSION"
 		fi
 	fi
 
-	# "默认设置文件..."
-	# https://github.com/coolsnowwolf/lede/blob/master/package/lean/default-settings/files/zzz-default-settings
+	# 默认设置文件...https://github.com/coolsnowwolf/lede/blob/master/package/lean/default-settings/files/zzz-default-settings
 	ZZZ_PATH="$(find "$HOME_PATH/package" -type f -name "*-default-settings" | grep files)"
 	echo "ZZZ_PATH=$ZZZ_PATH" >>"$GITHUB_ENV"
 
 	__yellow_color "开始修改IP设置..."
-	# 修改源码中IP设置
+	# shellcheck disable=SC2155
 	local def_ipaddress="$(grep "ipaddr:-" "$FILES_PATH/bin/$FILENAME_CONFIG_GEN" | grep -v 'addr_offset' | grep -Eo "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+")"
-	local new_ipaddress="$(grep -E "^uci set network.lan.ipaddr" $MATRIX_TARGET_PATH/$DIY_PART_SH | grep -Eo "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+")"
+	# shellcheck disable=SC2155
+	local new_ipaddress="$(grep -E "^uci set network.lan.ipaddr" "$MATRIX_TARGET_PATH/$DIY_PART_SH" | grep -Eo "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+")"
 	if [[ -n "$def_ipaddress" && -n "$new_ipaddress" ]]; then
 		sed -i "s/${def_ipaddress}/${new_ipaddress}/g" "$FILES_PATH/bin/$FILENAME_CONFIG_GEN"
 		__info_msg "IP地址从[$def_ipaddress]替换为[$new_ipaddress]"
@@ -456,7 +466,8 @@ function diy_public() {
 	__yellow_color "开始执行其它设置..."
 	# Openwrt初次运行初始化设置
 	# default_uci文件, UCI基础设置
-	echo "#!/bin/sh" >"$FILES_PATH/etc/$FILENAME_DEFAULT_UCI" && sudo chmod +x "$FILES_PATH/etc/$FILENAME_DEFAULT_UCI"
+	echo "#!/bin/sh" >"$FILES_PATH/etc/$FILENAME_DEFAULT_UCI"
+	sudo chmod +x "$FILES_PATH/etc/$FILENAME_DEFAULT_UCI"
 
 	cp -rf "$COMMON_PATH/custom/$FILENAME_DEFAULT_RUNONCE" "$FILES_PATH/etc/init.d/$FILENAME_DEFAULT_RUNONCE" && sudo chmod +x "$FILES_PATH/etc/init.d/$FILENAME_DEFAULT_RUNONCE"
 	cp -rf "$COMMON_PATH/custom/$FILENAME_DEFAULT_SETTINGS" "$FILES_PATH/etc/$FILENAME_DEFAULT_SETTINGS" && sudo chmod +x "$FILES_PATH/etc/$FILENAME_DEFAULT_SETTINGS"
@@ -470,7 +481,8 @@ function diy_public() {
 	EOF
 
 	# default_delete文件, Openwrt固件升级时需要删除的文件
-	echo "#!/bin/sh" >"$FILES_PATH/etc/$FILENAME_TO_DELETE" && sudo chmod +x "$FILES_PATH/etc/$FILENAME_TO_DELETE"
+	echo "#!/bin/sh" >"$FILES_PATH/etc/$FILENAME_TO_DELETE"
+	sudo chmod +x "$FILES_PATH/etc/$FILENAME_TO_DELETE"
 
 	# base-files-essential文件, Openwrt固件升级时需要保留的文件
 	if ! grep -q 'background' "$FILES_TO_KEEP"; then
@@ -636,6 +648,7 @@ function modify_config() {
 		sed -Ei 's/.*(CONFIG_PACKAGE_openssh-sftp-server).*/\1=y/g' "$HOME_PATH/.config"
 
 		if [[ $(grep -c "CONFIG_TARGET_ROOTFS_PARTSIZE=" "$HOME_PATH/.config") -eq '1' ]]; then
+			# shellcheck disable=SC2155
 			local partsize="$(grep -Eo "CONFIG_TARGET_ROOTFS_PARTSIZE=[0-9]+" "$HOME_PATH/.config" | cut -f2 -d=)"
 			if [[ "$partsize" -lt "400" ]]; then
 				sed -i '/CONFIG_TARGET_ROOTFS_PARTSIZE/d' "$HOME_PATH/.config"
@@ -767,6 +780,7 @@ function modify_config() {
 	fi
 
 	if [[ -s "$CONFFLICTIONS" && -x "$CONFFLICTIONS" ]]; then
+		# shellcheck disable=SC1090
 		source "$CONFFLICTIONS"
 	fi
 
@@ -829,7 +843,7 @@ function firmware_settings() {
 	if [[ -n "$NEW_KERNEL_PATCHVER" ]]; then
 		if [[ "$NEW_KERNEL_PATCHVER" == "0" ]]; then
 			__info_msg "编译固件内核: [ $KERNEL_PATCHVER ]"
-		elif [[ $(ls -1 "$HOME_PATH/target/linux/$TARGET_BOARD" | grep -c "kernel-$NEW_KERNEL_PATCHVER") -eq '1' ]]; then
+		elif [[ $(find "$HOME_PATH/target/linux/$TARGET_BOARD" -maxdepth 1 -type f -name "kernel-$NEW_KERNEL_PATCHVER" | wc -l) -eq 1 ]]; then
 			sed -i "s/${KERNEL_PATCHVER}/${NEW_KERNEL_PATCHVER}/g" "$HOME_PATH/target/linux/$TARGET_BOARD/Makefile"
 			KERNEL_PATCHVER=$NEW_KERNEL_PATCHVER
 			__success_msg "内核[ $NEW_KERNEL_PATCHVER ]更换完成"
@@ -842,9 +856,11 @@ function firmware_settings() {
 
 	local kernel_version_file="kernel-$KERNEL_PATCHVER"
 	if [[ -f "$HOME_PATH/include/$kernel_version_file" ]]; then
+		# shellcheck disable=SC2196
 		LINUX_KERNEL=$(egrep -o "$KERNEL_PATCHVER\.[0-9]+" "$HOME_PATH/include/$kernel_version_file")
 		[[ -z $LINUX_KERNEL ]] && LINUX_KERNEL="unknown"
 	else
+		# shellcheck disable=SC2196
 		LINUX_KERNEL=$(egrep -o "$KERNEL_PATCHVER\.[0-9]+" "$HOME_PATH/include/kernel-version.mk")
 		[[ -z $LINUX_KERNEL ]] && LINUX_KERNEL="unknown"
 	fi
@@ -936,6 +952,7 @@ function firmware_settings() {
 	GITHUB_RELEASE_URL="$GITHUB_REPOSITORY_URL/releases/tag/$AUTOUPDATE_TAG"
 	GITHUB_RELEASE_DOWNLOAD_URL="$GITHUB_REPOSITORY_URL/releases/download/$AUTOUPDATE_TAG"
 
+	# shellcheck disable=SC2129
 	echo "TARGET_BOARD=$TARGET_BOARD" >>"$GITHUB_ENV"
 	echo "TARGET_SUBTARGET=$TARGET_SUBTARGET" >>"$GITHUB_ENV"
 	echo "TARGET_PROFILE=$TARGET_PROFILE" >>"$GITHUB_ENV"
@@ -1109,9 +1126,14 @@ function compile_info() {
 	echo
 	__red_color "CPU信息"
 	echo "--------------------------------------------------------------------------------"
+	# shellcheck disable=SC2155
 	local cpu=$(grep "physical id" /proc/cpuinfo | sort | uniq | wc -l)
+	# shellcheck disable=SC2155
 	local cores=$(grep "cores" /proc/cpuinfo | uniq | awk '{print $4}')
+	# shellcheck disable=SC2155
 	local processor=$(grep -c "processor" /proc/cpuinfo)
+	# shellcheck disable=SC2155
+	# shellcheck disable=SC2002
 	local name=$(cat /proc/cpuinfo | grep name | cut -d: -f2 | uniq | sed 's/^[[:space:]]\+//')
 	echo "物理CPU:$cpu	核心/线程:$cores/$processor"
 	echo -e "CPU型号:\033[34m$name\033[0m"
@@ -1138,12 +1160,14 @@ function compile_info() {
 
 	echo
 	cd "$HOME_PATH" || exit
+	# shellcheck disable=SC2155
 	local plugins="$(grep -Eo "CONFIG_PACKAGE_luci-app-.*=y|CONFIG_PACKAGE_luci-theme-.*=y" "$HOME_PATH/.config" | grep -v 'INCLUDE\|_Proxy\|_static\|_dynamic' | sed 's/=y//' | sed 's/CONFIG_PACKAGE_//g')"
 
 	echo "$plugins" >"$HOME_PATH/plugins_info"
 	echo "#### 插件列表 :rocket:" >>"$GITHUB_STEP_SUMMARY"
 	nl "$HOME_PATH/plugins_info" >>"$GITHUB_STEP_SUMMARY"
 
+	# shellcheck disable=SC2155
 	local pluginsnr="$(nl "$HOME_PATH/plugins_info" | sed 's/$/\"/g' | sed 's/^/__blue_color \"/g')"
 
 	echo "$pluginsnr" >"$HOME_PATH/plugins_info"
@@ -1151,6 +1175,7 @@ function compile_info() {
 		__red_color "插件列表"
 		echo "--------------------------------------------------------------------------------"
 		chmod -Rf +x "$HOME_PATH/plugins_info"
+		# shellcheck disable=SC1091
 		source "$HOME_PATH/plugins_info"
 		rm -rf "$HOME_PATH/plugins_info"
 		echo
@@ -1159,6 +1184,7 @@ function compile_info() {
 	if [[ -s "$CONFFLICTIONS" ]]; then
 		__red_color "冲突信息"
 		echo "--------------------------------------------------------------------------------"
+		# shellcheck disable=SC1090
 		chmod +x "$CONFFLICTIONS" && source "$CONFFLICTIONS"
 		rm -rf "$CONFFLICTIONS"
 	fi
@@ -1176,28 +1202,33 @@ function update_repo() {
 	[[ -d "$repo_path" ]] && rm -rf "$repo_path"
 
 	cd "$GITHUB_WORKSPACE" || exit
-	git clone https://github.com/$GITHUB_REPOSITORY.git repo
+	git clone https://github.com/"$GITHUB_REPOSITORY".git repo
 
 	cd "$repo_path" || exit
 
 	# 更新settings.ini文件
 	# local settings_array=(LUCI_EDITION CONFIG_FILE BIOS_MODE ENABLE_CCACHE UPLOAD_FIRMWARE UPLOAD_RELEASE PACKAGES_REPO PACKAGES_BRANCH)
 	# for x in "${settings_array[@]}"; do
-	# 	local settings_key="$(grep -E "$x=" $SETTINGS_INI | sed 's/^[ ]*//g' | grep -v '^#' | awk '{print $1}' | awk -F'=' '{print $1}')"
-	# 	local settings_val="$(grep -E "$x=" $SETTINGS_INI | sed 's/^[ ]*//g' | grep -v '^#' | awk '{print $1}' | awk -F'=' '{print $2}' | sed 's#"##g')"
+	# 	# shellcheck disable=SC2155
+	# 	local settings_key="$(grep -E "$x=" "$SETTINGS_INI" | sed 's/^[ ]*//g' | grep -v '^#' | awk '{print $1}' | awk -F'=' '{print $1}')"
+	# 	# shellcheck disable=SC2155
+	# 	local settings_val="$(grep -E "$x=" "$SETTINGS_INI" | sed 's/^[ ]*//g' | grep -v '^#' | awk '{print $1}' | awk -F'=' '{print $2}' | sed 's#"##g')"
+	# 	# shellcheck disable=SC2086
 	# 	eval eval env_settings_val=\$$x
 	# 	if [[ -n "$settings_key" ]]; then
+	# 		# shellcheck disable=SC2154
 	# 		sed -i "s#$x=\"${settings_val}\"#$x=\"${env_settings_val}\"#g" "$SETTINGS_INI"
 	# 	fi
 	# done
-	# if [[ "$(cat $SETTINGS_INI)" != "$(cat $repo_settings_ini)" ]]; then
+	# # shellcheck disable=SC2154
+	# if [[ "$(cat "$SETTINGS_INI")" != "$(cat "$repo_settings_ini")" ]]; then
 	# 	ENABLE_REPO_UPDATE="true"
 	# 	cp -rf "$SETTINGS_INI" "$repo_settings_ini"
 	# fi
 
 	# 更新.config文件
 	# $HOME_PATH/scripts/diffconfig.sh > $DIFFCONFIG_TXT
-	if [[ "$(cat $DIFFCONFIG_TXT)" != "$(cat $repo_config_file)" ]]; then
+	if [[ "$(cat "$DIFFCONFIG_TXT")" != "$(cat "$repo_config_file")" ]]; then
 		ENABLE_REPO_UPDATE="true"
 		cp -rf "$DIFFCONFIG_TXT" "$repo_config_file"
 	fi
@@ -1205,11 +1236,12 @@ function update_repo() {
 	# 提交commit, 更新repo
 	cd "$repo_path" || exit
 
+	# shellcheck disable=SC2155
 	local branch_head="$(git rev-parse --abbrev-ref HEAD)"
 	if [[ "$ENABLE_REPO_UPDATE" == "true" ]]; then
 		git add .
-		git commit -m "[$MATRIX_TARGET] Update $CONFIG_FILE, etc. "
-		git push --force "https://$REPO_TOKEN@github.com/$GITHUB_REPOSITORY" HEAD:$branch_head
+		git commit -m "[$MATRIX_TARGET] Update $CONFIG_FILE, etc."
+		git push --force "https://$REPO_TOKEN@github.com/$GITHUB_REPOSITORY" HEAD:"$branch_head"
 		__success_msg "Your branch origin/$branch_head is now up to the latest."
 	else
 		__info_msg "Your branch is already up to date with origin/$branch_head. Nothing to commit, working tree clean."
@@ -1229,11 +1261,13 @@ function organize_firmware() {
 
 	# 清理无关文件
 	__yellow_color "开始清理无关文件..."
-	for X in $(cat "$FILES_TO_CLEAR" | sed '/^#/d'); do
-		sudo rm -rf *"$X"* >/dev/null 2>&1
+	while IFS= read -r X; do
+		# 跳过空行和注释行
+		[[ -z "$X" || "$X" =~ ^# ]] && continue
+		sudo rm -rf ./*"$X"* >/dev/null 2>&1
 		__info_msg "delete $X"
-	done
-	sudo rm -rf packages >/dev/null 2>&1
+	done <"$FILES_TO_CLEAR"
+	sudo rm -rf ./packages >/dev/null 2>&1
 	sudo rm -rf "$FILES_TO_CLEAR"
 
 	__yellow_color "开始准备固件自动更新相关固件..."
@@ -1246,32 +1280,40 @@ function organize_firmware() {
 	case "$TARGET_BOARD" in
 	x86)
 		if [[ "$FIRMWARE_TYPE" == "lxc" ]]; then
+			# shellcheck disable=SC2155
 			local firmware_rootfs_img="$(ls -1 | grep -Eo ".*squashfs.*rootfs.*img.gz")"
 			[[ -f $firmware_rootfs_img ]] && {
-				local rootfs_img_md5="$(md5sum $firmware_rootfs_img | cut -c1-3)$(sha256sum $firmware_rootfs_img | cut -c1-3)"
+				# shellcheck disable=SC2155
+				local rootfs_img_md5="$(md5sum "$firmware_rootfs_img" | cut -c1-3)$(sha256sum "$firmware_rootfs_img" | cut -c1-3)"
 				cp -rf "$firmware_rootfs_img" "$AUTOUPDATE_PATH/$FIRMWARE_NAME-rootfs-$rootfs_img_md5$FIRMWARE_EXT"
 				__info_msg "copy $firmware_rootfs_img to $AUTOUPDATE_PATH/$FIRMWARE_NAME-rootfs-$rootfs_img_md5$FIRMWARE_EXT"
 			}
 
+			# shellcheck disable=SC2155
 			local firmware_rootfs_tar="$(ls -1 | grep -Eo ".*rootfs.*tar.gz")"
 			[[ -f $firmware_rootfs_tar ]] && {
-				local rootfs_tar_md5="$(md5sum $firmware_rootfs_tar | cut -c1-3)$(sha256sum $firmware_rootfs_tar | cut -c1-3)"
+				# shellcheck disable=SC2155
+				local rootfs_tar_md5="$(md5sum "$firmware_rootfs_tar" | cut -c1-3)$(sha256sum "$firmware_rootfs_tar" | cut -c1-3)"
 				cp -rf "$firmware_rootfs_tar" "$AUTOUPDATE_PATH/$FIRMWARE_NAME-rootfs-$rootfs_tar_md5$ROOTFS_EXT"
 				__info_msg "copy $firmware_rootfs_tar to $AUTOUPDATE_PATH/$FIRMWARE_NAME-rootfs-$rootfs_tar_md5$ROOTFS_EXT"
 			}
 		else
 			if [[ $(ls -1 | grep -c "efi") -ge '1' ]]; then
+				# shellcheck disable=SC2155
 				local firmware_uefi="$(ls -1 | grep -Eo ".*squashfs.*efi.*img.gz")"
 				[[ -f $firmware_uefi ]] && {
-					local uefimd5="$(md5sum $firmware_uefi | cut -c1-3)$(sha256sum $firmware_uefi | cut -c1-3)"
+					# shellcheck disable=SC2155
+					local uefimd5="$(md5sum "$firmware_uefi" | cut -c1-3)$(sha256sum "$firmware_uefi" | cut -c1-3)"
 					cp -rf "$firmware_uefi" "$AUTOUPDATE_PATH/$FIRMWARE_NAME-uefi-$uefimd5$FIRMWARE_EXT"
 					__info_msg "copy $firmware_uefi to $AUTOUPDATE_PATH/$FIRMWARE_NAME-uefi-$uefimd5$FIRMWARE_EXT"
 				}
 			fi
 			if [[ $(ls -1 | grep -c "squashfs") -ge '1' ]]; then
+				# shellcheck disable=SC2155
 				local firmware_legacy="$(ls -1 | grep -Eo ".*squashfs.*img.gz" | grep -v ".vm\|.vb\|.vh\|.qco\|efi\|root")"
 				[[ -f $firmware_legacy ]] && {
-					local legacymd5="$(md5sum $firmware_legacy | cut -c1-3)$(sha256sum $firmware_legacy | cut -c1-3)"
+					# shellcheck disable=SC2155
+					local legacymd5="$(md5sum "$firmware_legacy" | cut -c1-3)$(sha256sum "$firmware_legacy" | cut -c1-3)"
 					cp -rf "$firmware_legacy" "$AUTOUPDATE_PATH/$FIRMWARE_NAME-legacy-$legacymd5$FIRMWARE_EXT"
 					__info_msg "copy $firmware_legacy to $AUTOUPDATE_PATH/$FIRMWARE_NAME-legacy-$legacymd5$FIRMWARE_EXT"
 				}
@@ -1280,17 +1322,18 @@ function organize_firmware() {
 		;;
 	*)
 		local firmware_sysupgrade
-		if [[ $(ls -1 | grep -c "sysupgrade") -ge '1' ]]; then
-			firmware_sysupgrade="$(ls -1 | grep -Eo ".*$TARGET_PROFILE.*sysupgrade.*$FIRMWARE_EXT" | grep -v "rootfs\|ext4\|factory")"
+		if [[ $(find . -maxdepth 1 -type f -name "*sysupgrade*" | wc -l) -ge 1 ]]; then
+			firmware_sysupgrade=$(find . -maxdepth 1 -type f -name "*$TARGET_PROFILE*sysupgrade*$FIRMWARE_EXT" ! -name "*rootfs*" ! -name "*ext4*" ! -name "*factory*")
 		else
-			firmware_sysupgrade="$(ls -1 | grep -Eo ".*$TARGET_PROFILE.*squashfs.*$FIRMWARE_EXT" | grep -v "rootfs\|ext4\|factory")"
+			firmware_sysupgrade=$(find . -maxdepth 1 -type f -name "*$TARGET_PROFILE*squashfs*$FIRMWARE_EXT" ! -name "*rootfs*" ! -name "*ext4*" ! -name "*factory*")
 		fi
 		if [[ -f "$firmware_sysupgrade" ]]; then
-			local sysupgrademd5="$(md5sum $firmware_sysupgrade | cut -c1-3)$(sha256sum $firmware_sysupgrade | cut -c1-3)"
+			# shellcheck disable=SC2155
+			local sysupgrademd5="$(md5sum "$firmware_sysupgrade" | cut -c1-3)$(sha256sum "$firmware_sysupgrade" | cut -c1-3)"
 			cp -rf "$firmware_sysupgrade" "$AUTOUPDATE_PATH/$FIRMWARE_NAME-sysupgrade-$sysupgrademd5$FIRMWARE_EXT"
 			__info_msg "copy $firmware_sysupgrade to $AUTOUPDATE_PATH/$FIRMWARE_NAME-sysupgrade-$sysupgrademd5$FIRMWARE_EXT"
 		else
-			__error_msg "没有找到可用的sysupgrade格式$FIRMWARE_EXT固件！"
+			__error_msg "没有找到可用的sysupgrade格式$FIRMWARE_EXT固件!"
 		fi
 		;;
 	esac
@@ -1298,7 +1341,8 @@ function organize_firmware() {
 	__yellow_color "开始准备固件发布文件..."
 	__info_msg "准备ipk压缩包"
 	if [[ "$UPLOAD_FIRMWARE" == "true" || "$UPLOAD_RELEASE" == "true" ]]; then
-		[[ ! -d $FIRMWARE_PATH/ipk ]] && mkdir -p $FIRMWARE_PATH/ipk || rm -rf $FIRMWARE_PATH/ipk/*
+		# shellcheck disable=SC2015
+		[[ ! -d $FIRMWARE_PATH/ipk ]] && mkdir -p "$FIRMWARE_PATH"/ipk || rm -rf "$FIRMWARE_PATH"/ipk/*
 
 		ipk_files=$(find "$HOME_PATH/bin/packages/" -type f -name "*.ipk")
 		if [ -n "$ipk_files" ]; then
@@ -1325,6 +1369,7 @@ function organize_firmware() {
 function release_info() {
 	cd "$MATRIX_TARGET_PATH" || exit
 	__yellow_color "开始准备固件发布信息..."
+	# shellcheck disable=SC2155
 	local diy_part_ipaddr=$(awk '{print $3}' "$MATRIX_TARGET_PATH/$DIY_PART_SH" | awk -F= '$1 == "network.lan.ipaddr" {print $2}' | sed "s/'//g" 2>/dev/null)
 	local release_ipaddr=${diy_part_ipaddr:-192.168.1.1}
 

@@ -138,9 +138,12 @@ function parse_settings() {
 	echo "COMPILE_DATE_CN=$(date +%Y年%m月%d日%H时%M分)" >>"$GITHUB_ENV"
 	echo "COMPILE_DATE_STAMP=$(date -d "$(date +'%Y-%m-%d %H:%M:%S')" +%s)" >>"$GITHUB_ENV"
 
-	# 路径
+	# 源码下载的根目录
+	SOURCE_WORKSPACE=${SOURCE}_${SOURCE_BRANCH}
+	# 固件编译的根目录
 	HOME_PATH="$GITHUB_WORKSPACE/openwrt"
 	# shellcheck disable=SC2129
+	echo "SOURCE_WORKSPACE=$SOURCE_WORKSPACE" >>"$GITHUB_ENV"
 	echo "HOME_PATH=$HOME_PATH" >>"$GITHUB_ENV"
 	echo "BIN_PATH=$HOME_PATH/bin" >>"$GITHUB_ENV"
 	echo "AUTOUPDATE_PATH=$HOME_PATH/bin/autoupdate" >>"$GITHUB_ENV"
@@ -173,7 +176,7 @@ function parse_settings() {
 	# shellcheck disable=SC2155
 	# shellcheck disable=SC2002
 	local cpu_name=$(cat /proc/cpuinfo | grep name | cut -d: -f2 | uniq | sed 's/^[[:space:]]\+//')
-	echo "::notice title=GithubCPU::$cpu_name"
+	echo "::notice title=CPU 名称::$cpu_name"
 	echo "::notice title=编译时间::$(date +'%Y-%m-%d %H:%M:%S')"
 	echo "::notice title=源码链接::$SOURCE_URL"
 	echo "::notice title=源码分支::$SOURCE_BRANCH"
@@ -218,11 +221,11 @@ function init_environment() {
 	# sudo -E apt-get -qq autoremove -y --purge
 	# sudo -E apt-get -qq clean
 	sudo timedatectl set-timezone "$TZ"
-	# "/"目录创建文件夹$MATRIX_TARGET
-	sudo mkdir -p /"$MATRIX_TARGET"
+	# "/"目录创建文件夹$SOURCE_WORKSPACE
+	sudo mkdir -p /"$SOURCE_WORKSPACE"
 	# shellcheck disable=SC2086
 	# shellcheck disable=SC2128
-	sudo chown $USER:$GROUPS /$MATRIX_TARGET
+	sudo chown $USER:$GROUPS /$SOURCE_WORKSPACE
 	git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 	git config --global user.name "github-actions[bot]"
 }
@@ -233,7 +236,7 @@ function init_environment() {
 function git_clone_source() {
 	# 在每matrix.target目录下下载源码
 	git clone -b "$SOURCE_BRANCH" "$SOURCE_URL" openwrt >/dev/null 2>&1
-	ln -sf "/$MATRIX_TARGET/openwrt" "$HOME_PATH"
+	ln -sf "/$SOURCE_WORKSPACE/openwrt" "$HOME_PATH"
 
 	# 将build等文件夹复制到openwrt文件夹下
 	cd "$GITHUB_WORKSPACE" || exit
@@ -1255,7 +1258,7 @@ function organize_firmware() {
 	cd "$FIRMWARE_PATH" || exit
 
 	echo "files under $HOME_PATH:"
-	ls -Agho "/$MATRIX_TARGET/openwrt"
+	ls -Agho "/$SOURCE_WORKSPACE/openwrt"
 	echo "files under $FIRMWARE_PATH:"
 	ls -Agho "$FIRMWARE_PATH"
 

@@ -138,7 +138,7 @@ function parse_settings() {
 	echo "COMPILE_DATE_CN=$(date +%Y年%m月%d日%H时%M分)" >>"$GITHUB_ENV"
 	echo "COMPILE_DATE_STAMP=$(date -d "$(date +'%Y-%m-%d %H:%M:%S')" +%s)" >>"$GITHUB_ENV"
 
-	# 源码下载的根目录
+	# 源码下载的根目录，例如：lede_master
 	SOURCE_WORKSPACE=${SOURCE}_${SOURCE_BRANCH}
 	# 固件编译的根目录
 	HOME_PATH="$GITHUB_WORKSPACE/openwrt"

@@ -278,9 +278,6 @@ function do_diy() {
 	# 执行diy_part.sh脚本
 	/bin/bash "$MATRIX_TARGET_PATH/$DIY_PART_SH"
 
-	# 更新插件源, 并安装插件源
-	./scripts/feeds update -a >/dev/null 2>&1 && ./scripts/feeds install -a >/dev/null 2>&1
-
 	# 修改.config文件
 	modify_config
 
@@ -331,8 +328,7 @@ function update_feeds() {
 
 	# 更新插件源
 	__yellow_color "开始更新插件源..."
-	./scripts/feeds clean
-	./scripts/feeds update -a >/dev/null 2>&1
+	./scripts/feeds update -a >/dev/null 2>&1 && ./scripts/feeds install -a >/dev/null 2>&1
 	sudo rm -rf "$FEEDS_PATH/$packages"/{LICENSE,*README*,*readme*,.git,.github,.gitignore} >/dev/null 2>&1
 
 	# 替换Node为预编译

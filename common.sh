@@ -245,6 +245,11 @@ function git_clone_source() {
 	# 下载common仓库
 	sudo rm -rf "$COMMON_PATH" && git clone -b main --depth 1 https://github.com/libntdll/common "$COMMON_PATH"
 	chmod -Rf +x "$BUILD_PATH"
+
+	# 设置一些变量
+	# 默认设置文件...https://github.com/coolsnowwolf/lede/blob/master/package/lean/default-settings/files/zzz-default-settings
+	ZZZ_PATH="$(find "$HOME_PATH/package" -type f -name "*-default-settings" | grep files)"
+	echo "ZZZ_PATH=$ZZZ_PATH" >>"$GITHUB_ENV"
 }
 
 ################################################################################################################
@@ -349,7 +354,8 @@ function update_feeds() {
 
 	# 删除源码中重复插件及依赖
 	for X in "$FEEDS_PATH/$packages"/*; do
-		find "$FEEDS_PATH" -maxdepth 3 -type d -name "$X" | grep -v "$packages" | xargs sudo rm -rf {}
+		dir_name="$(basename "$X")"
+		find "$FEEDS_PATH" -maxdepth 3 -type d -name "$dir_name" | grep -v "/$packages/" | xargs sudo rm -rf
 	done
 
 	# 设置中文语言包(官方: zh_Hans, Lede: zh-cn; 对缺失相应文件的插件进行补充)
@@ -451,10 +457,6 @@ function diy_public() {
 			__info_msg "luci-app-autoupdate版本: $AUTOUPDATE_VERSION"
 		fi
 	fi
-
-	# 默认设置文件...https://github.com/coolsnowwolf/lede/blob/master/package/lean/default-settings/files/zzz-default-settings
-	ZZZ_PATH="$(find "$HOME_PATH/package" -type f -name "*-default-settings" | grep files)"
-	echo "ZZZ_PATH=$ZZZ_PATH" >>"$GITHUB_ENV"
 
 	__yellow_color "开始修改IP设置..."
 	# shellcheck disable=SC2155

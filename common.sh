@@ -278,12 +278,8 @@ function do_diy() {
 	# 执行diy_part.sh脚本
 	/bin/bash "$MATRIX_TARGET_PATH/$DIY_PART_SH"
 
-	# 再次更新插件源, 并安装插件源
+	# 更新插件源, 并安装插件源
 	./scripts/feeds update -a >/dev/null 2>&1 && ./scripts/feeds install -a >/dev/null 2>&1
-
-	# 修改golang版本
-	# rm -rf feeds/packages/lang/golang
-	# git clone https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang
 
 	# 修改.config文件
 	modify_config
@@ -305,7 +301,7 @@ function update_feeds() {
 	__yellow_color "开始添加插件源..."
 	local packages_url="https://github.com/$PACKAGES_REPO.git"
 	local packages_branch="$PACKAGES_BRANCH"
-	local packages="pkg$GITHUB_ACTOR"
+	local packages="custom_$GITHUB_ACTOR"
 	local feeds_file="feeds.conf.default"
 	__info_msg "源码: $SOURCE 插件源仓库: $packages_url 插件源分支: $packages_branch 插件源文件夹: $packages"
 
@@ -320,10 +316,7 @@ function update_feeds() {
 		fi
 	fi
 
-	# 当插件源添加至 feeds.conf.default 首行时, 优先安装自己添加的插件源
-	#sed -i "1i src-git $packages $packages_url;$packages_branch" $feeds_file
-
-	# 当插件源添加至 feeds.conf.default 结尾时, 重复插件, 先删除相应文件, 操作完毕后, 再一次运行./scripts/feeds update -a, 即可更新对应的.index与target.index文件
+	# 添加插件源到feeds.conf.default文件
 	if [[ -z "$packages_branch" ]]; then
 		cat >>$feeds_file <<-EOF
 			src-git $packages $packages_url

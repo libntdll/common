@@ -328,6 +328,8 @@ function update_feeds() {
 			src-git $packages $packages_url;$packages_branch
 		EOF
 	fi
+	__info_msg "当前${feeds_file}:"
+	cat $feeds_file
 
 	# 更新插件源
 	__yellow_color "开始更新插件源..."

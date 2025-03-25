@@ -315,13 +315,9 @@ function update_feeds() {
 
 	# 添加插件源到feeds.conf.default文件
 	if [[ -z "$packages_branch" ]]; then
-		cat >>$feeds_file <<-EOF
-			src-git $packages $packages_url
-		EOF
+		sed -i "1i src-git $packages $packages_url" "$feeds_file"
 	else
-		cat >>$feeds_file <<-EOF
-			src-git $packages $packages_url;$packages_branch
-		EOF
+		sed -i "1i src-git $packages $packages_url;$packages_branch" "$feeds_file"
 	fi
 	__info_msg "当前${feeds_file}:"
 	cat $feeds_file

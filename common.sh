@@ -402,15 +402,6 @@ function diy_public() {
 		find "$MATRIX_TARGET_PATH/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 --forward --no-backup-if-mismatch"
 	fi
 
-	#__yellow_color "开始添加openwrt.sh(或openwrt.lxc.sh)..."
-	# openwrt.sh
-	#[[ ! -d "$FILES_PATH/usr/bin" ]] && mkdir -p $FILES_PATH/usr/bin
-	#if [[ "$FIRMWARE_TYPE" == "lxc" ]]; then
-	#	wget https://raw.githubusercontent.com/libntdll/pve/main/openwrt.lxc.sh -O /usr/bin/openwrt $FILES_PATH/usr/bin/openwrt && sudo chmod +x $FILES_PATH/usr/bin/openwrt
-	#else
-	#	wget https://raw.githubusercontent.com/libntdll/luci-app-autoupdate/main/root/usr/bin/autoupdate -O  $FILES_PATH/usr/bin/openwrt && sudo chmod +x $FILES_PATH/usr/bin/openwrt
-	#fi
-
 	__yellow_color "开始设置自动更新插件..."
 	# 自动更新插件（luci-app-autoupdate）
 	if [[ $FIRMWARE_TYPE == "lxc" ]]; then

@@ -117,6 +117,7 @@ function parse_settings() {
 	# 基础设置
 	# shellcheck disable=SC2129
 	echo "LUCI_EDITION=$LUCI_EDITION" >>"$GITHUB_ENV"
+	echo "LUCI_EDITION_NUMBER=$LUCI_EDITION_NUMBER" >>"$GITHUB_ENV"
 	echo "CONFIG_FILE=$CONFIG_FILE" >>"$GITHUB_ENV"
 	echo "FIRMWARE_TYPE=$FIRMWARE_TYPE" >>"$GITHUB_ENV"
 	echo "BIOS_MODE=$BIOS_MODE" >>"$GITHUB_ENV"
@@ -196,9 +197,9 @@ function parse_settings() {
 ################################################################################################################
 function notice_begin() {
 	if [[ "$NOTICE_TYPE" == "TG" ]]; then
-		curl -k --data chat_id="$TELEGRAM_CHAT_ID" --data "text=✨主人✨: 您正在使用【$REPOSITORY】仓库【$MATRIX_TARGET】文件夹编译【$SOURCE-$LUCI_EDITION】固件,请耐心等待...... 😋" "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage"
+		curl -k --data chat_id="$TELEGRAM_CHAT_ID" --data "text=✨主人✨: 您正在使用【$REPOSITORY】仓库【$MATRIX_TARGET】文件夹编译【$SOURCE-$LUCI_EDITION_NUMBER】固件,请耐心等待...... 😋" "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage"
 	elif [[ "$NOTICE_TYPE" == "PUSH" ]]; then
-		curl -k --data token="$PUSH_PLUS_TOKEN" --data title="开始编译【$SOURCE-$MATRIX_TARGET】" --data "content=✨主人✨: 您正在使用【$REPOSITORY】仓库【$MATRIX_TARGET】文件夹编译【$SOURCE-$LUCI_EDITION】固件,请耐心等待...... 😋" "http://www.pushplus.plus/send"
+		curl -k --data token="$PUSH_PLUS_TOKEN" --data title="开始编译【$SOURCE-$MATRIX_TARGET】" --data "content=✨主人✨: 您正在使用【$REPOSITORY】仓库【$MATRIX_TARGET】文件夹编译【$SOURCE-$LUCI_EDITION_NUMBER】固件,请耐心等待...... 😋" "http://www.pushplus.plus/send"
 	fi
 }
 
@@ -347,7 +348,7 @@ function update_feeds() {
 
 	# 替换Node为预编译
 	rm -rf "$FEEDS_PATH/packages/lang/node"
-	cp -r "$COMMON_PATH/share/node/$LUCI_EDITION/node" "$FEEDS_PATH/packages/lang/node"
+	cp -r "$COMMON_PATH/share/node/$LUCI_EDITION_NUMBER/node" "$FEEDS_PATH/packages/lang/node"
 
 	# 删除自己插件源不用的文件
 	local files_to_delete=(".git" ".github")
@@ -893,7 +894,7 @@ function firmware_settings() {
 	# 固件版本 如: lede-x86-64-202310011001
 	FIRMWARE_BRIEF="$SOURCE-$TARGET_PROFILE-$COMPILE_DATE_HM"
 	# 固件名称前缀 如: lede-18.06-x86-64, 方便自动更新固件搜寻可更新固件
-	FIRMWARE_NAME_PREFIX="$SOURCE-$LUCI_EDITION-$TARGET_PROFILE"
+	FIRMWARE_NAME_PREFIX="$SOURCE-$LUCI_EDITION_NUMBER-$TARGET_PROFILE"
 	# 固件名称（简写, x86区分legacy、uefi）如: lede-18.06-x86-64-202310101010
 	FIRMWARE_NAME="$FIRMWARE_NAME_PREFIX-$COMPILE_DATE_HM"
 	# 固件名称与后缀
@@ -992,7 +993,7 @@ function firmware_settings() {
 		# 64
 		TARGET_SUBTARGET="$TARGET_SUBTARGET"
 		# 18.06
-		LUCI_EDITION="$LUCI_EDITION"
+		LUCI_EDITION="$LUCI_EDITION_NUMBER"
 		# 202310011221
 		COMPILE_DATE="$COMPILE_DATE_HM"
 		# .img.gz
@@ -1042,7 +1043,7 @@ function compile_info() {
 	__blue_color "源码分支: $SOURCE_BRANCH"
 	__blue_color "源码作者: $SOURCE_OWNER"
 	__blue_color "内核版本: $LINUX_KERNEL"
-	__blue_color "LUCI版本: $LUCI_EDITION"
+	__blue_color "LUCI版本: $LUCI_EDITION_NUMBER"
 	__blue_color "机型信息: $TARGET_PROFILE"
 	__blue_color "CPU 架构: $ARCHITECTURE"
 	__blue_color "固件作者: $GITHUB_ACTOR"
@@ -1275,7 +1276,7 @@ function organize_firmware() {
 	x86)
 		if [[ "$FIRMWARE_TYPE" == "lxc" ]]; then
 			# shellcheck disable=SC2155
-			local firmware_rootfs_img="$(ls -1 | grep -Eo ".*squashfs.*rootfs.*img.gz")"
+			local firmware_rootfs_img=$(find . -maxdepth 1 -type f -name "*squashfs*rootfs*img.gz" | head -n 1)
 			[[ -f $firmware_rootfs_img ]] && {
 				# shellcheck disable=SC2155
 				local rootfs_img_md5="$(md5sum "$firmware_rootfs_img" | cut -c1-3)$(sha256sum "$firmware_rootfs_img" | cut -c1-3)"
@@ -1284,7 +1285,7 @@ function organize_firmware() {
 			}
 
 			# shellcheck disable=SC2155
-			local firmware_rootfs_tar="$(ls -1 | grep -Eo ".*rootfs.*tar.gz")"
+			local firmware_rootfs_tar=$(find . -maxdepth 1 -type f -name "*rootfs*tar.gz" | head -n 1)
 			[[ -f $firmware_rootfs_tar ]] && {
 				# shellcheck disable=SC2155
 				local rootfs_tar_md5="$(md5sum "$firmware_rootfs_tar" | cut -c1-3)$(sha256sum "$firmware_rootfs_tar" | cut -c1-3)"
@@ -1292,9 +1293,9 @@ function organize_firmware() {
 				__info_msg "copy $firmware_rootfs_tar to $AUTOUPDATE_PATH/$FIRMWARE_NAME-rootfs-$rootfs_tar_md5$ROOTFS_EXT"
 			}
 		else
-			if [[ $(ls -1 | grep -c "efi") -ge '1' ]]; then
+			if find . -maxdepth 1 -type f -name "*efi*" | read; then
 				# shellcheck disable=SC2155
-				local firmware_uefi="$(ls -1 | grep -Eo ".*squashfs.*efi.*img.gz")"
+				local firmware_uefi=$(find . -maxdepth 1 -type f -name "*squashfs*efi*img.gz" | head -n 1)
 				[[ -f $firmware_uefi ]] && {
 					# shellcheck disable=SC2155
 					local uefimd5="$(md5sum "$firmware_uefi" | cut -c1-3)$(sha256sum "$firmware_uefi" | cut -c1-3)"
@@ -1302,9 +1303,9 @@ function organize_firmware() {
 					__info_msg "copy $firmware_uefi to $AUTOUPDATE_PATH/$FIRMWARE_NAME-uefi-$uefimd5$FIRMWARE_EXT"
 				}
 			fi
-			if [[ $(ls -1 | grep -c "squashfs") -ge '1' ]]; then
+			if find . -maxdepth 1 -type f -name "*squashfs*" | read; then
 				# shellcheck disable=SC2155
-				local firmware_legacy="$(ls -1 | grep -Eo ".*squashfs.*img.gz" | grep -v ".vm\|.vb\|.vh\|.qco\|efi\|root")"
+				local firmware_legacy=$(find . -maxdepth 1 -type f -name "*squashfs*img.gz" ! -name "*vm*" ! -name "*vb*" ! -name "*vh*" ! -name "*qco*" ! -name "*efi*" ! -name "*root*" | head -n 1)
 				[[ -f $firmware_legacy ]] && {
 					# shellcheck disable=SC2155
 					local legacymd5="$(md5sum "$firmware_legacy" | cut -c1-3)$(sha256sum "$firmware_legacy" | cut -c1-3)"
@@ -1351,7 +1352,7 @@ function organize_firmware() {
 	fi
 	__info_msg "重命名固件名称"
 	if [[ ! -d armvirt && ! -f armvirt ]]; then
-		rename -v "s/^openwrt/$COMPILE_DATE_MD-$SOURCE-$LUCI_EDITION-$LINUX_KERNEL/" "./*.*"
+		rename -v "s/^openwrt/$COMPILE_DATE_MD-$SOURCE-$LUCI_EDITION_NUMBER-$LINUX_KERNEL/" "./*.*"
 	fi
 
 	release_info

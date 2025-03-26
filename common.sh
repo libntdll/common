@@ -164,6 +164,7 @@ function parse_settings() {
 	# 源码files文件夹
 	# https://github.com/coolsnowwolf/lede/tree/master/package/base-files/files
 	echo "FILES_PATH=$HOME_PATH/package/base-files/files" >>"$GITHUB_ENV"
+	echo "OPENWRT_RELEASE_PATH=$HOME_PATH/package/base-files/files/etc/openwrt_release" >>"$GITHUB_ENV"
 	echo "FILE_DEFAULT_UCI=$HOME_PATH/package/base-files/files/etc/default_uci" >>"$GITHUB_ENV"
 	echo "FILES_TO_DELETE=$HOME_PATH/package/base-files/files/etc/default_delete" >>"$GITHUB_ENV"
 	echo "FILES_TO_KEEP=$HOME_PATH/package/base-files/files/lib/upgrade/keep.d/base-files-essential" >>"$GITHUB_ENV"
@@ -209,17 +210,30 @@ function notice_end() {
 ################################################################################################################
 # 初始化编译环境
 ################################################################################################################
+function init_env() {
+	sudo -E apt-get -qq update -y
+	sudo -E apt-get -qq install -y curl gawk gettext git git-core grep libpython3-dev libssl-dev python3 python3-pip wget xsltproc zip
+	sudo timedatectl set-timezone "$TZ"
+	# "/"目录创建文件夹$SOURCE_WORKSPACE
+	sudo mkdir -p /"$SOURCE_WORKSPACE"
+	# shellcheck disable=SC2086
+	# shellcheck disable=SC2128
+	sudo chown $USER:$GROUPS /$SOURCE_WORKSPACE
+	git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+	git config --global user.name "github-actions[bot]"
+}
+
 function init_environment() {
 	sudo -E apt-get -qq update -y
-	# sudo -E apt-get -qq full-upgrade -y
+	sudo -E apt-get -qq full-upgrade -y
 	sudo -E apt-get -qq install -y ack antlr3 aria2 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 \
 		ccache clang cmake cpio curl device-tree-compiler fastjar flex g++-multilib gawk gcc-multilib genisoimage gettext git gperf haveged help2man intltool \
 		lib32stdc++6 libc6-dev-i386 libelf-dev libfuse-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses-dev libpcap0.8-dev \
 		libpython3-dev libreadline-dev libssl-dev libtool llvm lrzsz msmtp nano ninja-build \
 		p7zip p7zip-full patch pkgconf python3 python3-pip qemu-utils rename rsync scons squashfs-tools subversion swig texinfo tree \
 		uglifyjs unzip upx-ucl vim wget xmlto xxd zlib1g-dev
-	# sudo -E apt-get -qq autoremove -y --purge
-	# sudo -E apt-get -qq clean
+	sudo -E apt-get -qq autoremove -y --purge
+	sudo -E apt-get -qq clean
 	sudo timedatectl set-timezone "$TZ"
 	# "/"目录创建文件夹$SOURCE_WORKSPACE
 	sudo mkdir -p /"$SOURCE_WORKSPACE"
@@ -243,13 +257,11 @@ function git_clone_source() {
 	find ./ -maxdepth 1 -type d ! -path './openwrt' ! -path './' -print0 | xargs -0 -I {} cp -rf {} "$HOME_PATH"
 
 	# 下载common仓库
-	sudo rm -rf "$COMMON_PATH" && git clone -b main --depth 1 https://github.com/libntdll/common "$COMMON_PATH"
+	sudo rm -rf "$COMMON_PATH" && git clone --depth 1 https://github.com/libntdll/common "$COMMON_PATH"
 	chmod -Rf +x "$BUILD_PATH"
 
 	# 设置一些变量
-	# 默认设置文件...https://github.com/coolsnowwolf/lede/blob/master/package/lean/default-settings/files/zzz-default-settings
-	ZZZ_PATH="$(find "$HOME_PATH/package" -type f -name "*-default-settings" | grep files)"
-	echo "ZZZ_PATH=$ZZZ_PATH" >>"$GITHUB_ENV"
+
 }
 
 ################################################################################################################
@@ -488,6 +500,8 @@ function diy_lede() {
 
 	cd "$HOME_PATH" || exit
 
+	# 默认设置文件...https://github.com/coolsnowwolf/lede/blob/master/package/lean/default-settings/files/zzz-default-settings
+	ZZZ_PATH="$(find "$HOME_PATH/package" -type f -name "*-default-settings" | grep files)"
 	if [[ -n "$ZZZ_PATH" ]]; then
 		#__info_msg "去除防火墙规则"
 		#sed -i '/to-ports 53/d' "$ZZZ_PATH"
@@ -495,15 +509,6 @@ function diy_lede() {
 		__info_msg "设置密码为空"
 		sed -i '/CYXluq4wUazHjmCDBCqXF/d' "$ZZZ_PATH"
 	fi
-
-	# 修复后台管理页面无法打开, 降级openssl到1.1.1版本
-	#if [[ "$FIRMWARE_TYPE" == "lxc" ]]; then
-	#	__info_msg "修复lxc固件openssl"
-	#	sudo rm -rf "$HOME_PATH/include/openssl-module.mk"
-	#	sudo rm -rf "$HOME_PATH/package/libs/openssl"
-	#	cp -rf "$HOME_PATH/build/common/share/include/openssl-engine.mk" "$HOME_PATH/include/openssl-engine.mk"
-	#	cp -rf "$HOME_PATH/build/common/share/package/libs/openssl" "$HOME_PATH/package/libs/openssl"
-	#fi
 
 	echo
 	echo "--------------common_diy_lede end--------------"

@@ -70,6 +70,7 @@ function parse_settings() {
 		SOURCE="lede"
 		SOURCE_OWNER="Lean's"
 		SOURCE_BRANCH="master"
+		LUCI_EDITION_NUMBER="$LUCI_EDITION"
 		;;
 	openwrt | Openwrt | OpenWrt | OpenWRT | OPENWRT | official | Official | OFFICIAL)
 		SOURCE_URL="https://github.com/openwrt/openwrt"
@@ -77,8 +78,10 @@ function parse_settings() {
 		SOURCE_OWNER="openwrt's"
 		if [[ $LUCI_EDITION =~ (main|master) ]]; then
 			SOURCE_BRANCH=$LUCI_EDITION
+			LUCI_EDITION_NUMBER="24.10"
 		else
 			SOURCE_BRANCH="openwrt-$LUCI_EDITION"
+			LUCI_EDITION_NUMBER="$LUCI_EDITION"
 		fi
 		;;
 	lienol | Lienol | LIENOL)
@@ -86,6 +89,11 @@ function parse_settings() {
 		SOURCE="lienol"
 		SOURCE_OWNER="Lienol's"
 		SOURCE_BRANCH=$LUCI_EDITION
+		if [[ $LUCI_EDITION =~ (main|master) ]]; then
+			LUCI_EDITION_NUMBER="24.10"
+		else
+			LUCI_EDITION_NUMBER="$LUCI_EDITION"
+		fi
 		;;
 	immortalwrt | Immortalwrt | IMMORTALWRT | mortal | immortal)
 		SOURCE_URL="https://github.com/immortalwrt/immortalwrt"
@@ -94,8 +102,10 @@ function parse_settings() {
 		LUCI_EDITION="${SOURCE_BRANCH#openwrt-}"
 		if [[ $LUCI_EDITION =~ (main|master) ]]; then
 			SOURCE_BRANCH=$LUCI_EDITION
+			LUCI_EDITION_NUMBER="24.10"
 		else
 			SOURCE_BRANCH="openwrt-$LUCI_EDITION"
+			LUCI_EDITION_NUMBER="$LUCI_EDITION"
 		fi
 		;;
 	*)
@@ -103,10 +113,6 @@ function parse_settings() {
 		exit 1
 		;;
 	esac
-
-	if [[ $LUCI_EDITION =~ (main|master) ]]; then
-		LUCI_EDITION="24.10"
-	fi
 
 	# 基础设置
 	# shellcheck disable=SC2129
@@ -182,7 +188,7 @@ function parse_settings() {
 	echo "::notice title=源码链接::$SOURCE_URL"
 	echo "::notice title=源码分支::$SOURCE_BRANCH"
 	echo "::notice title=固件类型::$FIRMWARE_TYPE"
-	echo "::notice title=LUCI版本::$LUCI_EDITION"
+	echo "::notice title=LUCI版本::$LUCI_EDITION_NUMBER"
 }
 
 ################################################################################################################

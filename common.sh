@@ -256,7 +256,7 @@ function init_environment() {
 ################################################################################################################
 function git_clone_source() {
 	# 在每matrix.target目录下下载源码
-	git clone -b "$SOURCE_BRANCH" "$SOURCE_URL" openwrt >/dev/null 2>&1
+	git clone -b "$SOURCE_BRANCH" "$SOURCE_URL" openwrt
 	ln -sf "/$SOURCE_WORKSPACE/openwrt" "$HOME_PATH"
 
 	# 将build等文件夹复制到openwrt文件夹下
@@ -343,6 +343,7 @@ function update_feeds() {
 
 	# 更新插件源
 	__yellow_color "开始更新插件源..."
+	./scripts/feeds clean
 	./scripts/feeds update -a >/dev/null 2>&1 && ./scripts/feeds install -a >/dev/null 2>&1
 	sudo rm -rf "$FEEDS_PATH/$packages"/{LICENSE,*README*,*readme*,.git,.github,.gitignore} >/dev/null 2>&1
 

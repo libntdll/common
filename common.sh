@@ -180,6 +180,9 @@ function parse_settings() {
 	echo "FILENAME_DEFAULT_RUNONCE=default_settings_runonce" >>"$GITHUB_ENV"
 	echo "FILENAME_CONFIG_GEN=config_generate" >>"$GITHUB_ENV"
 	echo "FILENAME_TO_DELETE=default_delete" >>"$GITHUB_ENV"
+	# 默认设置文件...https://github.com/coolsnowwolf/lede/blob/master/package/lean/default-settings/files/zzz-default-settings
+	ZZZ_PATH="$(find "$HOME_PATH/package" -type f -name "*-default-settings" | grep files)"
+	echo "ZZZ_PATH=$ZZZ_PATH" >>"$GITHUB_ENV"
 
 	# shellcheck disable=SC2155
 	# shellcheck disable=SC2002
@@ -508,8 +511,6 @@ function diy_lede() {
 
 	cd "$HOME_PATH" || exit
 
-	# 默认设置文件...https://github.com/coolsnowwolf/lede/blob/master/package/lean/default-settings/files/zzz-default-settings
-	ZZZ_PATH="$(find "$HOME_PATH/package" -type f -name "*-default-settings" | grep files)"
 	if [[ -n "$ZZZ_PATH" ]]; then
 		#__info_msg "去除防火墙规则"
 		#sed -i '/to-ports 53/d' "$ZZZ_PATH"
@@ -1294,6 +1295,7 @@ function organize_firmware() {
 				__info_msg "copy $firmware_rootfs_tar to $AUTOUPDATE_PATH/$FIRMWARE_NAME-rootfs-$rootfs_tar_md5$ROOTFS_EXT"
 			}
 		else
+			# shellcheck disable=SC2162
 			if find . -maxdepth 1 -type f -name "*efi*" | read; then
 				# shellcheck disable=SC2155
 				local firmware_uefi=$(find . -maxdepth 1 -type f -name "*squashfs*efi*img.gz" | head -n 1)
@@ -1304,6 +1306,7 @@ function organize_firmware() {
 					__info_msg "copy $firmware_uefi to $AUTOUPDATE_PATH/$FIRMWARE_NAME-uefi-$uefimd5$FIRMWARE_EXT"
 				}
 			fi
+			# shellcheck disable=SC2162
 			if find . -maxdepth 1 -type f -name "*squashfs*" | read; then
 				# shellcheck disable=SC2155
 				local firmware_legacy=$(find . -maxdepth 1 -type f -name "*squashfs*img.gz" ! -name "*vm*" ! -name "*vb*" ! -name "*vh*" ! -name "*qco*" ! -name "*efi*" ! -name "*root*" | head -n 1)

@@ -180,10 +180,6 @@ function parse_settings() {
 	echo "FILENAME_DEFAULT_RUNONCE=default_settings_runonce" >>"$GITHUB_ENV"
 	echo "FILENAME_CONFIG_GEN=config_generate" >>"$GITHUB_ENV"
 	echo "FILENAME_TO_DELETE=default_delete" >>"$GITHUB_ENV"
-	# 默认设置文件...https://github.com/coolsnowwolf/lede/blob/master/package/lean/default-settings/files/zzz-default-settings
-	ZZZ_PATH="$(find "$HOME_PATH/package" -type f -name "*-default-settings" | grep files)"
-	echo "ZZZ_PATH=$ZZZ_PATH" >>"$GITHUB_ENV"
-
 	# shellcheck disable=SC2155
 	# shellcheck disable=SC2002
 	local cpu_name=$(cat /proc/cpuinfo | grep name | cut -d: -f2 | uniq | sed 's/^[[:space:]]\+//')
@@ -271,7 +267,9 @@ function git_clone_source() {
 	chmod -Rf +x "$BUILD_PATH"
 
 	# 设置一些变量
-
+	# 默认设置文件...https://github.com/coolsnowwolf/lede/blob/master/package/lean/default-settings/files/zzz-default-settings
+	ZZZ_PATH="$(find "$HOME_PATH/package" -type f -name "*-default-settings" | grep files)"
+	echo "ZZZ_PATH=$ZZZ_PATH" >>"$GITHUB_ENV"
 }
 
 ################################################################################################################
